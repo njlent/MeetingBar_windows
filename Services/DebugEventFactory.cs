@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using MeetingBar.Windows.Models;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -23,7 +24,7 @@ namespace MeetingBar.Windows.Services
             return new CalendarEvent
             {
                 Id = "debug-" + Guid.NewGuid().ToString("N"),
-                Title = string.IsNullOrWhiteSpace(title) ? "Test meeting" : title.Trim(),
+                Title = string.IsNullOrWhiteSpace(title) ? T("Test meeting") : title.Trim(),
                 Start = start,
                 End = start.AddMinutes(Math.Max(1, Math.Min(1440, durationMinutes))),
                 CalendarId = "meetingbar-debug",
@@ -33,7 +34,7 @@ namespace MeetingBar.Windows.Services
                 MeetingService = string.Equals(service, "No meeting link", StringComparison.OrdinalIgnoreCase) ? null : service,
                 MeetingUrl = link,
                 ConferenceUrl = link,
-                Notes = "Injected locally from MeetingBar Settings. Not stored in your calendar."
+                Notes = T("Injected locally from MeetingBar Settings. Not stored in your calendar.")
             };
         }
     }

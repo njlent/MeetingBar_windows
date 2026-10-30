@@ -8,6 +8,7 @@ using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Services;
 using MeetingBar.Windows.ViewModels;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Views
 {
@@ -76,19 +77,19 @@ namespace MeetingBar.Windows.Views
         {
             DetailsRows.Children.Clear();
             DetailsRows.RowDefinitions.Clear();
-            AddRow("Date", CalendarEvent.FormatDate(item.Start, _viewModel.TimelineDateFormat));
-            AddRow("Time", item.TimeRange);
-            AddRow("Status", item.IsCurrent ? "Ongoing · " + item.Remaining : item.DetailedCountdown);
-            AddRow("Availability", item.IsBusy ? "Busy" : "Free");
-            if (item.CanRestoreNotifications) AddRow("Notifications", "Muted");
-            if (item.IsDeclined) AddRow("Response", "Declined"); else if (item.IsTentative) AddRow("Response", "Tentative");
-            AddRow("Calendar", item.CalendarName);
-            AddRow("Organizer", item.Organizer);
-            AddRow("Location", item.Location);
-            AddRow("Service", item.MeetingService);
-            AddRow("Meeting link", item.MeetingUrl);
-            if (!string.Equals(item.EventUrl, item.MeetingUrl, StringComparison.OrdinalIgnoreCase)) AddRow("Event link", item.EventUrl);
-            AddRow("Notes", item.DetailsNotes);
+            AddRow(T("Date"), CalendarEvent.FormatDate(item.Start, _viewModel.TimelineDateFormat));
+            AddRow(T("Time"), item.TimeRange);
+            AddRow(T("Status"), item.IsCurrent ? T("Ongoing · {0}", item.Remaining) : item.DetailedCountdown);
+            AddRow(T("Availability"), item.IsBusy ? T("Busy") : T("Free"));
+            if (item.CanRestoreNotifications) AddRow(T("Notifications"), T("Muted"));
+            if (item.IsDeclined) AddRow(T("Response"), T("Declined")); else if (item.IsTentative) AddRow(T("Response"), T("Tentative"));
+            AddRow(T("Calendar"), item.CalendarName);
+            AddRow(T("Organizer"), item.Organizer);
+            AddRow(T("Location"), item.Location);
+            AddRow(T("Service"), item.MeetingService);
+            AddRow(T("Meeting link"), item.MeetingUrl);
+            if (!string.Equals(item.EventUrl, item.MeetingUrl, StringComparison.OrdinalIgnoreCase)) AddRow(T("Event link"), item.EventUrl);
+            AddRow(T("Notes"), item.DetailsNotes);
         }
 
         private void AddRow(string label, string value)
@@ -98,7 +99,7 @@ namespace MeetingBar.Windows.Views
             DetailsRows.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var labelText = new TextBlock
             {
-                Text = label.ToUpperInvariant(),
+                Text = label.ToUpper(Culture),
                 Foreground = (Brush)FindResource("MutedBrush"),
                 FontSize = 9,
                 FontWeight = FontWeights.SemiBold,

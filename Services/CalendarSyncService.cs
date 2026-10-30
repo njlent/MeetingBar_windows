@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MeetingBar.Windows.Models;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -22,7 +23,7 @@ namespace MeetingBar.Windows.Services
         public IReadOnlyList<CalendarEvent> Events { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarEvent> TimelineEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarInfo> Calendars { get; private set; } = new List<CalendarInfo>();
-        public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = "Starting…" };
+        public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = T("Starting…") };
         public event EventHandler Changed;
 
         public CalendarSyncService(SettingsService settings) { _settings = settings; }
@@ -71,7 +72,7 @@ namespace MeetingBar.Windows.Services
                 {
                     Provider = "Calendars",
                     IsHealthy = errors.Count == 0,
-                    Message = sources.Count == 0 ? "No calendar sources configured" : errors.Count == 0 ? "Updated " + DateTime.Now.ToString("t") : string.Join(" | ", errors)
+                    Message = sources.Count == 0 ? T("No calendar sources configured") : errors.Count == 0 ? T("Updated {0}", DateTime.Now.ToString("t", FormatCulture)) : string.Join(" | ", errors)
                 };
                 AppLog.Info("Calendar refresh completed: sources=" + sources.Count + ", errors=" + errors.Count + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count);
             }

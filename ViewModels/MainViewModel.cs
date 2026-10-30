@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Services;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.ViewModels
 {
@@ -41,8 +42,8 @@ namespace MeetingBar.Windows.ViewModels
         public bool Use24HourClock => _settings.Current.Use24HourClock;
         public bool ShowTimelineDate => _settings.Current.ShowTimelineDate;
         public string TimelineDateFormat => _settings.Current.TimelineDateFormat;
-        public string Header => NextEvent?.IsCurrent == true ? "CURRENT MEETING" : "NEXT MEETING";
-        public string NextTitle => NextEvent?.Title ?? "No upcoming meetings";
+        public string Header => NextEvent?.IsCurrent == true ? T("CURRENT MEETING") : T("NEXT MEETING");
+        public string NextTitle => NextEvent?.Title ?? T("No upcoming meetings");
         public string NextMeta => NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
         public string WidgetTitle
         {
@@ -52,16 +53,16 @@ namespace MeetingBar.Windows.ViewModels
                 {
                     switch (_settings.Current.EndOfDayWidgetBehavior)
                     {
-                        case EndOfDayWidgetBehavior.NoEventsToday: return "No events for today";
-                        case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(string.IsNullOrWhiteSpace(_settings.Current.EndOfDayCustomMessage) ? "Done for today" : _settings.Current.EndOfDayCustomMessage.Trim());
-                        default: return "No upcoming meetings";
+                        case EndOfDayWidgetBehavior.NoEventsToday: return T("No events for today");
+                        case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(EndOfDayMessage(_settings.Current.EndOfDayCustomMessage));
+                        default: return T("No upcoming meetings");
                     }
                 }
                 var mode = _settings.Current.TitleMode;
                 if (mode == TitleMode.Hidden) return "";
                 if (mode == TitleMode.Dot) return "•";
-                if (mode == TitleMode.Generic) return "Meeting";
-                return TruncateWidgetTitle(WidgetEvent.Title ?? "Untitled event");
+                if (mode == TitleMode.Generic) return T("Meeting");
+                return TruncateWidgetTitle(WidgetEvent.Title ?? T("Untitled event"));
             }
         }
         public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
@@ -152,6 +153,9 @@ namespace MeetingBar.Windows.ViewModels
             }
             Raise(nameof(HasEvents));
         }
+        // The stored default message is English, so show it translated until the user writes their own.
+        internal static string EndOfDayMessage(string custom) =>
+            string.IsNullOrWhiteSpace(custom) || custom.Trim() == "Done for today" ? T("Done for today") : custom.Trim();
         private string TruncateWidgetTitle(string title)
         {
             var max = Math.Max(5, _settings.Current.TitleMaxLength);

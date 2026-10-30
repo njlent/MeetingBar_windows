@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Script.Serialization;
 using MeetingBar.Windows.Models;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -27,7 +28,7 @@ namespace MeetingBar.Windows.Services
         public async Task ConnectAsync(AppSettings settings, CalendarSourceSettings source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (string.IsNullOrWhiteSpace(settings.GoogleClientId)) throw new InvalidOperationException("Enter a Google OAuth desktop client ID first.");
+            if (string.IsNullOrWhiteSpace(settings.GoogleClientId)) throw new InvalidOperationException(T("Enter a Google OAuth desktop client ID first."));
             var verifier = Base64Url(RandomBytes(48));
             string challenge;
             using (var sha = SHA256.Create()) challenge = Base64Url(sha.ComputeHash(Encoding.ASCII.GetBytes(verifier)));
@@ -41,7 +42,7 @@ namespace MeetingBar.Windows.Services
                 var auth = "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + HttpUtility.UrlEncode(settings.GoogleClientId) + "&redirect_uri=" + HttpUtility.UrlEncode(redirect) + "&response_type=code&scope=" + HttpUtility.UrlEncode(Scope) + "&access_type=offline&prompt=select_account%20consent&code_challenge=" + challenge + "&code_challenge_method=S256&state=" + HttpUtility.UrlEncode(state);
                 System.Diagnostics.Process.Start(auth);
                 var clientTask = listener.AcceptTcpClientAsync();
-                if (await Task.WhenAny(clientTask, Task.Delay(TimeSpan.FromMinutes(3))) != clientTask) throw new TimeoutException("Google sign-in timed out.");
+                if (await Task.WhenAny(clientTask, Task.Delay(TimeSpan.FromMinutes(3))) != clientTask) throw new TimeoutException(T("Google sign-in timed out."));
                 string requestLine;
                 using (var client = clientTask.Result)
                 using (var stream = client.GetStream())
@@ -49,20 +50,20 @@ namespace MeetingBar.Windows.Services
                 {
                     requestLine = await reader.ReadLineAsync();
                     string header; do { header = await reader.ReadLineAsync(); } while (!string.IsNullOrEmpty(header));
-                    var html = "<html><body style='font-family:Segoe UI;background:#171b26;color:white;padding:40px'><h2>MeetingBar connected</h2><p>You can close this tab.</p></body></html>";
+                    var html = "<html><body style='font-family:Segoe UI;background:#171b26;color:white;padding:40px'><h2>" + WebUtility.HtmlEncode(T("MeetingBar connected")) + "</h2><p>" + WebUtility.HtmlEncode(T("You can close this tab.")) + "</p></body></html>";
                     var response = Encoding.UTF8.GetBytes(html);
                     var responseHeader = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: " + response.Length + "\r\nConnection: close\r\n\r\n");
                     await stream.WriteAsync(responseHeader, 0, responseHeader.Length); await stream.WriteAsync(response, 0, response.Length);
                 }
-                if (string.IsNullOrWhiteSpace(requestLine)) throw new InvalidOperationException("Google returned an empty callback.");
+                if (string.IsNullOrWhiteSpace(requestLine)) throw new InvalidOperationException(T("Google returned an empty callback."));
                 var target = requestLine.Split(' ')[1]; var query = HttpUtility.ParseQueryString(new Uri(redirect.TrimEnd('/') + target).Query);
-                if (!string.Equals(query["state"], state, StringComparison.Ordinal)) throw new InvalidOperationException("Google sign-in state validation failed.");
+                if (!string.Equals(query["state"], state, StringComparison.Ordinal)) throw new InvalidOperationException(T("Google sign-in state validation failed."));
                 var code = query["code"];
-                if (string.IsNullOrWhiteSpace(code)) throw new InvalidOperationException("Google did not return an authorization code.");
+                if (string.IsNullOrWhiteSpace(code)) throw new InvalidOperationException(T("Google did not return an authorization code."));
                 var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["code"] = code, ["client_id"] = settings.GoogleClientId, ["client_secret"] = settings.GoogleClientSecret ?? "", ["redirect_uri"] = redirect, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier });
                 EnsureCalendarScope(token);
                 var refresh = Value(token, "refresh_token");
-                if (string.IsNullOrWhiteSpace(refresh)) throw new InvalidOperationException("Google did not issue a refresh token.");
+                if (string.IsNullOrWhiteSpace(refresh)) throw new InvalidOperationException(T("Google did not issue a refresh token."));
                 source.GoogleRefreshTokenProtected = Protect(refresh);
                 source.GoogleAccountEmail = await GetEmail(Value(token, "access_token"));
                 if (string.IsNullOrWhiteSpace(source.Name) || source.Name == CalendarSourceSettings.DefaultName(CalendarProviderKind.Google)) source.Name = source.GoogleAccountEmail;
@@ -72,7 +73,7 @@ namespace MeetingBar.Windows.Services
 
         public async Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(AppSettings settings, CalendarSourceSettings source, DateTime from, DateTime to)
         {
-            if (!IsConnected(source)) throw new InvalidOperationException("Google account is not connected.");
+            if (!IsConnected(source)) throw new InvalidOperationException(T("Google account is not connected."));
             var access = await AccessToken(settings, source);
             var eventColors = new Dictionary<string, string>();
             try { eventColors = ParseEventColors(await GetJson("https://www.googleapis.com/calendar/v3/colors", access)); }
@@ -92,7 +93,7 @@ namespace MeetingBar.Windows.Services
                     var response = self == null ? null : Value(self, "responseStatus");
                     var item = new CalendarEvent
                     {
-                        Id = Value(raw, "id"), Title = Value(raw, "summary") ?? "Untitled event", Notes = Value(raw, "description"), Location = Value(raw, "location"),
+                        Id = Value(raw, "id"), Title = Value(raw, "summary") ?? T("Untitled event"), Notes = Value(raw, "description"), Location = Value(raw, "location"),
                         CalendarOpenUrl = Value(raw, "htmlLink"), ConferenceUrl = ConferenceUrl(raw) ?? Value(raw, "hangoutLink"), CalendarId = calendar.Id, CalendarName = calendar.Name,
                         CalendarColor = ResolveEventColor(Value(raw, "colorId"), eventColors, calendar.Color), Organizer = NestedValue(raw, "organizer", "email"), Start = start, End = end,
                         IsAllDay = NestedValue(raw, "start", "date") != null, IsDeclined = response == "declined", IsTentative = response == "tentative" || response == "needsAction",
@@ -115,7 +116,7 @@ namespace MeetingBar.Windows.Services
         private static void EnsureCalendarScope(Dictionary<string, object> token)
         {
             if (HasCalendarScope(Value(token, "scope"))) return;
-            throw new InvalidOperationException("Google connected without Calendar permission. In Settings → Calendars, complete step 3: add the calendar.readonly scope under Google Data Access. Then Disconnect and connect again.");
+            throw new InvalidOperationException(T("Google connected without Calendar permission. In Settings → Calendars, complete step 3: add the calendar.readonly scope under Google Data Access. Then Disconnect and connect again."));
         }
         private async Task<Dictionary<string, object>> PostForm(string url, Dictionary<string, string> form)
         {
@@ -124,7 +125,7 @@ namespace MeetingBar.Windows.Services
             {
                 string description = null;
                 try { description = Value(_json.Deserialize<Dictionary<string, object>>(body), "error_description"); } catch { }
-                throw new InvalidOperationException("Google OAuth error" + (string.IsNullOrWhiteSpace(description) ? "." : ": " + description));
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(description) ? T("Google OAuth error.") : T("Google OAuth error: {0}", description));
             }
             return _json.Deserialize<Dictionary<string, object>>(body);
         }
@@ -151,15 +152,15 @@ namespace MeetingBar.Windows.Services
             switch (reason)
             {
                 case "accessNotConfigured":
-                    return "Google Calendar API is not enabled for this OAuth project. In Settings → Calendars, complete step 2 in the same Google Cloud project as the Desktop client. Click Enable, wait a minute, then Refresh.";
+                    return T("Google Calendar API is not enabled for this OAuth project. In Settings → Calendars, complete step 2 in the same Google Cloud project as the Desktop client. Click Enable, wait a minute, then Refresh.");
                 case "insufficientPermissions":
-                    return "Google connected without Calendar permission. In Settings → Calendars, complete step 3 under Data Access, then Disconnect and connect again.";
+                    return T("Google connected without Calendar permission. In Settings → Calendars, complete step 3 under Data Access, then Disconnect and connect again.");
                 case "dailyLimitExceeded":
                 case "rateLimitExceeded":
                 case "userRateLimitExceeded":
-                    return "Google Calendar API quota is temporarily exhausted. Try Refresh later.";
+                    return T("Google Calendar API quota is temporarily exhausted. Try Refresh later.");
                 default:
-                    return "Google Calendar error: " + status;
+                    return T("Google Calendar error: {0}", status);
             }
         }
         internal static Dictionary<string, string> ParseEventColors(Dictionary<string, object> root)

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Web.Script.Serialization;
 using MeetingBar.Windows.Models;
+using MeetingBar.Localization;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -22,9 +24,10 @@ namespace MeetingBar.Windows.Services
             {
                 ["ApplicationPath"] = Process.GetCurrentProcess().MainModule.FileName,
                 ["Use24HourClock"] = settings.Use24HourClock,
+                ["Language"] = Localizer.Language,
                 ["Events"] = events.OrderBy(x => x.Start).Select(x => new Dictionary<string, object>
                 {
-                    ["Title"] = x.Title ?? "Untitled event", ["Start"] = x.Start.ToString("o"), ["End"] = x.End.ToString("o"),
+                    ["Title"] = x.Title ?? T("Untitled event"), ["Start"] = x.Start.ToString("o"), ["End"] = x.End.ToString("o"),
                     ["IsAllDay"] = x.IsAllDay, ["CanJoin"] = x.CanJoin, ["IsDismissed"] = x.IsDismissed, ["Color"] = x.CalendarColor ?? "#6D7CFF"
                 }).ToList()
             };

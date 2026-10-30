@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Views;
 using Forms = System.Windows.Forms;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -28,8 +29,8 @@ namespace MeetingBar.Windows.Services
         public void ShowTest(CalendarEvent item, bool fullScreen)
         {
             if (item == null) return;
-            _tray.BalloonTipTitle = "TEST · " + item.Title;
-            _tray.BalloonTipText = item.CanJoin ? item.Countdown + " · Click MeetingBar to join" : item.Countdown;
+            _tray.BalloonTipTitle = T("TEST · {0}", item.Title);
+            _tray.BalloonTipText = item.CanJoin ? T("{0} · Click MeetingBar to join", item.Countdown) : item.Countdown;
             _tray.ShowBalloonTip(7000);
             if (fullScreen) new ReminderWindow(item, () => _opener.Open(item)).Show();
         }
@@ -46,14 +47,14 @@ namespace MeetingBar.Windows.Services
                     var notifyAt = item.Start.AddMinutes(-minutesBefore);
                     if (settings.NotifyBeforeMeeting && now >= notifyAt && now < notifyAt.AddMinutes(1) && _sent.Add(item.Id + ":start:" + minutesBefore))
                     {
-                    _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = item.CanJoin ? item.Countdown + " • Click MeetingBar to join" : item.Countdown; _tray.ShowBalloonTip(7000);
+                    _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = item.CanJoin ? T("{0} · Click MeetingBar to join", item.Countdown) : item.Countdown; _tray.ShowBalloonTip(7000);
                     if (settings.FullscreenReminder) new ReminderWindow(item, () => _opener.Open(item)).Show();
                     }
                 }
                 }
                 if (settings.AutoJoin && item.CanJoin && now >= item.Start.AddMinutes(-settings.AutoJoinMinutesBefore) && now < item.Start.AddMinutes(-settings.AutoJoinMinutesBefore).AddMinutes(1) && _sent.Add(item.Id + ":auto")) _opener.Open(item);
                 if (canSendReminders && settings.NotifyAtEnd && now >= item.End && now < item.End.AddMinutes(1) && _sent.Add(item.Id + ":end"))
-                { _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = "Meeting ended"; _tray.ShowBalloonTip(5000); }
+                { _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = T("Meeting ended"); _tray.ShowBalloonTip(5000); }
             }
             _sent.RemoveWhere(id => !(_events?.Invoke() ?? new List<CalendarEvent>()).Any(x => id.StartsWith(x.Id + ":")));
         }

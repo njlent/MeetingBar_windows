@@ -115,6 +115,8 @@ public sealed class AppSettings
     public string PreferredBrowserPath { get; set; } = "";
     public string PreferredBrowserArguments { get; set; } = "";
     public string MapProvider { get; set; } = "Google Maps";
+    // Empty follows the Windows display language; otherwise a tag from Localizer.Languages.
+    public string Language { get; set; } = "";
 
     public bool EnsureCalendarSources()
     {
@@ -163,6 +165,7 @@ public sealed class SettingsState
 {
     public string StatusMessage { get; set; } = "";
     public bool IsBusy { get; set; }
+    public bool Succeeded { get; set; }
     public string ActiveSourceId { get; set; } = "";
     public string GoogleAccountEmail { get; set; } = "";
     public List<CalendarState> Calendars { get; set; } = [];

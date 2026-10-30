@@ -8,5 +8,5 @@
     {"type":"Container","separator":true,"spacing":"medium","$when":"${$host.widgetSize != 'small'}","items":[{"type":"ColumnSet","$data":"${events}","spacing":"small","columns":[{"type":"Column","width":"auto","items":[{"type":"TextBlock","text":"■","color":"${color}","size":"small"}]},{"type":"Column","width":"auto","items":[{"type":"TextBlock","text":"${time}","weight":"bolder","size":"small","wrap":false}]},{"type":"Column","width":"stretch","items":[{"type":"TextBlock","text":"${title}","weight":"bolder","size":"small","isSubtle":"${isPast}","wrap":true,"maxLines":1},{"type":"TextBlock","text":"${status}","isSubtle":true,"size":"small","spacing":"none","wrap":true,"maxLines":1}]}]}]},
     {"type":"TextBlock","text":"${emptyMessage}","horizontalAlignment":"center","isSubtle":true,"wrap":true,"$when":"${showEmpty}"}
   ],
-  "actions":[{"type":"Action.Execute","title":"Join","verb":"join","isEnabled":"${canJoin}"},{"type":"Action.Execute","title":"Open MeetingBar","verb":"open"},{"type":"Action.Execute","title":"Refresh","verb":"refresh"}]
+  "actions":[{"type":"Action.Execute","title":"${joinLabel}","verb":"join","isEnabled":"${canJoin}"},{"type":"Action.Execute","title":"${openLabel}","verb":"open"},{"type":"Action.Execute","title":"${refreshLabel}","verb":"refresh"}]
 }

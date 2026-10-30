@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Services;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Views
 {
@@ -146,7 +147,7 @@ namespace MeetingBar.Windows.Views
 
             var anchor = now.AddHours(offsetHours);
             var dayOffset = (anchor.Date - now.Date).Days;
-            var dayName = dayOffset == 0 ? "TODAY" : dayOffset == -1 ? "YESTERDAY" : dayOffset == 1 ? "TOMORROW" : anchor.ToString("ddd, d MMM", CultureInfo.CurrentCulture).ToUpperInvariant();
+            var dayName = dayOffset == 0 ? T("TODAY") : dayOffset == -1 ? T("YESTERDAY") : dayOffset == 1 ? T("TOMORROW") : CalendarEvent.FormatDayName(anchor);
             drawingContext.DrawText(Text(dayName, 9, FontWeights.SemiBold, muted, pixelsPerDip), new Point(0, 0));
             if (ShowTimelineDate)
             {

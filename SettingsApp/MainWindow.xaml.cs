@@ -7,13 +7,15 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
+using MeetingBar.Localization;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.SettingsApp;
 
 public sealed partial class MainWindow : Window
 {
     private static readonly string[] TimelineDatePatterns = { "dd.MM.yyyy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "dd MMM yyyy" };
-    private static readonly string[] TimelineDateChoices = { "31.12.2026  (dd.MM.yyyy)", "12/31/2026  (MM/dd/yyyy)", "31/12/2026  (dd/MM/yyyy)", "2026-12-31  (yyyy-MM-dd)", "31 Dec 2026  (dd MMM yyyy)" };
+    private static readonly string[] DebugServices = { "Google Meet", "Microsoft Teams", "Zoom", "No meeting link" };
     private const int MinimumWindowWidth = 420, MinimumWindowHeight = 480;
     private const double NarrowPageWidth = 560, HeaderIconMinimumWidth = 440;
     private readonly DispatcherTimer _stateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -25,7 +27,7 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider, _language;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
@@ -59,6 +61,14 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         ConfigureWindow();
+        ApplyStaticText();
+        Localizer.LanguageChanged += (_, _) =>
+        {
+            ApplyStaticText();
+            var page = _page;
+            _page = "";
+            ShowPage(page);
+        };
         ShowPage("Widget");
         Navigation.Loaded += (_, _) => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
@@ -80,7 +90,6 @@ public sealed partial class MainWindow : Window
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var id = Win32Interop.GetWindowIdFromWindow(hwnd);
         var appWindow = AppWindow.GetFromWindowId(id);
-        appWindow.Title = "MeetingBar Settings";
         if (AppWindowTitleBar.IsCustomizationSupported())
         {
             appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
@@ -129,6 +138,22 @@ public sealed partial class MainWindow : Window
             _ => Navigation.CompactPaneLength
         };
         FooterContent.Margin = new Thickness(inset, 0, narrow ? 16 : 38, 0);
+    }
+
+    private void ApplyStaticText()
+    {
+        RootGrid.Language = Culture.Name;
+        AppWindow.Title = T("MeetingBar Settings");
+        TitleText.Text = T("Settings");
+        BrandSubtitle.Text = T("Calendar companion");
+        WidgetItem.Content = T("Widget");
+        CalendarsItem.Content = T("Calendars");
+        EventsItem.Content = T("Events");
+        MeetingsItem.Content = T("Meetings");
+        RemindersItem.Content = T("Reminders");
+        GeneralItem.Content = T("General");
+        DebugItem.Content = T("Debug");
+        SaveButton.Content = T("Save");
     }
 
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -235,70 +260,70 @@ public sealed partial class MainWindow : Window
         Width = 150
     };
 
-    private static ToggleSwitch Toggle(bool value) => new() { IsOn = value, OnContent = "On", OffContent = "Off", HorizontalAlignment = HorizontalAlignment.Right };
+    private static ToggleSwitch Toggle(bool value) => new() { IsOn = value, OnContent = T("On"), OffContent = T("Off"), HorizontalAlignment = HorizontalAlignment.Right };
 
     private static TextBox TextEntry(string value, double width = 310) => new() { Text = value ?? "", MinWidth = width };
 
     private void BuildWidgetPage()
     {
-        AddHeader("Widget", "Choose where MeetingBar appears and what it shows.", "\uE7F4");
-        AddSection("Taskbar surface");
-        _widgetMode = Choice(new[] { "Tray icon only", "Right side", "Left side" }, (int)_settings.WidgetMode);
-        AddCard("Mode", "Taskbar modes use a borderless overlay because Windows has no third-party text-widget slot.", _widgetMode);
+        AddHeader(T("Widget"), T("Choose where MeetingBar appears and what it shows."), "\uE7F4");
+        AddSection(T("Taskbar surface"));
+        _widgetMode = Choice(new[] { T("Tray icon only"), T("Right side"), T("Left side") }, (int)_settings.WidgetMode);
+        AddCard(T("Mode"), T("Taskbar modes use a borderless overlay because Windows has no third-party text-widget slot."), _widgetMode);
 
         _widgetWidth = new Slider { Minimum = 140, Maximum = 900, Value = _settings.WidgetWidth, Width = 280, StepFrequency = 10 };
-        AddCard("Maximum widget width", "Short titles shrink automatically; longer titles can use this limit.", _widgetWidth);
+        AddCard(T("Maximum widget width"), T("Short titles shrink automatically; longer titles can use this limit."), _widgetWidth);
 
         _offsetX = Number(_settings.WidgetOffsetX, -1000, 1000);
-        AddCard("Horizontal offset", "Fine-tune placement for taskbar tools or display scaling.", _offsetX);
+        AddCard(T("Horizontal offset"), T("Fine-tune placement for taskbar tools or display scaling."), _offsetX);
         _offsetY = Number(_settings.WidgetOffsetY, -500, 500);
-        AddCard("Vertical offset", "Move the surface relative to the taskbar.", _offsetY);
+        AddCard(T("Vertical offset"), T("Move the surface relative to the taskbar."), _offsetY);
 
         _autoWidgetColor = Toggle(_settings.UseAutomaticWidgetColor);
-        AddCard("Match Windows taskbar color", "Uses the current Windows light, dark, and taskbar appearance.", _autoWidgetColor);
+        AddCard(T("Match Windows taskbar color"), T("Uses the current Windows light, dark, and taskbar appearance."), _autoWidgetColor);
         _widgetColor = TextEntry(_settings.WidgetBackgroundColor, 170);
-        AddCard("Custom widget color", "Used when automatic matching is off. Enter #RRGGBB.", _widgetColor);
+        AddCard(T("Custom widget color"), T("Used when automatic matching is off. Enter #RRGGBB."), _widgetColor);
 
-        AddSection("Fullscreen behavior");
+        AddSection(T("Fullscreen behavior"));
         _hideWidgetInFullscreen = Toggle(_settings.HideWidgetInFullscreen);
-        AddCard("Hide during fullscreen apps", "Temporarily hide only the taskbar widget while a game, video, or other app fills its monitor. The tray icon stays available.", _hideWidgetInFullscreen);
+        AddCard(T("Hide during fullscreen apps"), T("Temporarily hide only the taskbar widget while a game, video, or other app fills its monitor. The tray icon stays available."), _hideWidgetInFullscreen);
         var fullscreenApps = BuildFullscreenAppEditor();
         fullscreenApps.IsEnabled = _hideWidgetInFullscreen.IsOn;
         _hideWidgetInFullscreen.Toggled += (_, _) => fullscreenApps.IsEnabled = _hideWidgetInFullscreen.IsOn;
-        AddWideCard("Also hide for selected apps", "Optional fallback for borderless or windowed games: hide whenever one of these apps is in the foreground. Add an app that is open now or browse for its executable.", fullscreenApps);
+        AddWideCard(T("Also hide for selected apps"), T("Optional fallback for borderless or windowed games: hide whenever one of these apps is in the foreground. Add an app that is open now or browse for its executable."), fullscreenApps);
 
-        AddSection("Display");
-        _titleMode = Choice(Enum.GetNames<TitleMode>(), (int)_settings.TitleMode);
-        AddCard("Meeting title", "Choose full title, a generic label, a dot, or hidden.", _titleMode);
-        _timeMode = Choice(new[] { "Countdown", "Start time", "Hidden" }, (int)_settings.TimeMode);
-        AddCard("Meeting time", "Controls the time text in the taskbar surface.", _timeMode);
+        AddSection(T("Display"));
+        _titleMode = Choice(new[] { T("Full title"), T("Generic label"), T("Dot"), T("Hidden") }, (int)_settings.TitleMode);
+        AddCard(T("Meeting title"), T("Choose full title, a generic label, a dot, or hidden."), _titleMode);
+        _timeMode = Choice(new[] { T("Countdown"), T("Start time"), T("Hidden") }, (int)_settings.TimeMode);
+        AddCard(T("Meeting time"), T("Controls the time text in the taskbar surface."), _timeMode);
         _ongoingTime = Toggle(_settings.ShowOngoingTimeRemaining);
-        AddCard("Time remaining", "Show how much time is left during an ongoing meeting.", _ongoingTime);
+        AddCard(T("Time remaining"), T("Show how much time is left during an ongoing meeting."), _ongoingTime);
         _titleLength = Number(_settings.TitleMaxLength, 8, 200);
-        AddCard("Maximum title length", "Longer event names are shortened at this character count.", _titleLength);
+        AddCard(T("Maximum title length"), T("Longer event names are shortened at this character count."), _titleLength);
         _showIcon = Toggle(_settings.ShowServiceIcon);
-        AddCard("Colored event icon", "Show the event-colored square beside the title.", _showIcon);
-        _endOfDayBehavior = Choice(new[] { "Show next event", "Hide taskbar widget", "Show no events for today", "Show custom message" }, (int)_settings.EndOfDayWidgetBehavior);
-        AddCard("After today's events", "Choose what the taskbar widget does when no current or upcoming event remains today.", _endOfDayBehavior);
+        AddCard(T("Colored event icon"), T("Show the event-colored square beside the title."), _showIcon);
+        _endOfDayBehavior = Choice(new[] { T("Show next event"), T("Hide taskbar widget"), T("Show no events for today"), T("Show custom message") }, (int)_settings.EndOfDayWidgetBehavior);
+        AddCard(T("After today's events"), T("Choose what the taskbar widget does when no current or upcoming event remains today."), _endOfDayBehavior);
         _endOfDayCustomMessage = TextEntry(_settings.EndOfDayCustomMessage, 240);
         _endOfDayCustomMessage.MaxLength = 200;
-        AddCard("Custom end-of-day message", "Used when Show custom message is selected.", _endOfDayCustomMessage);
+        AddCard(T("Custom end-of-day message"), T("Used when Show custom message is selected."), _endOfDayCustomMessage);
 
-        AddSection("Starting meeting highlight");
+        AddSection(T("Starting meeting highlight"));
         _highlightMeetings = Toggle(_settings.HighlightStartingMeetings);
-        AddCard("Highlight starting meetings", "Keep the taskbar widget visibly active around the meeting start.", _highlightMeetings);
+        AddCard(T("Highlight starting meetings"), T("Keep the taskbar widget visibly active around the meeting start."), _highlightMeetings);
         _highlightBefore = Number(_settings.HighlightMinutesBefore, 0, 60);
-        AddCard("Start highlighting before", "Minutes before the scheduled start.", _highlightBefore);
+        AddCard(T("Start highlighting before"), T("Minutes before the scheduled start."), _highlightBefore);
         _highlightAfter = Number(_settings.HighlightMinutesAfterStart, 1, 120);
-        AddCard("Initial meeting highlight", "Minutes after the scheduled start when whole-meeting highlighting is off.", _highlightAfter);
+        AddCard(T("Initial meeting highlight"), T("Minutes after the scheduled start when whole-meeting highlighting is off."), _highlightAfter);
         _highlightWholeMeeting = Toggle(_settings.HighlightWholeMeeting);
-        AddCard("Highlight whole meeting", "Keep the active state until the scheduled meeting ends.", _highlightWholeMeeting);
-        _highlightStyle = Choice(new[] { "Same as hover", "Animated shine" }, (int)_settings.WidgetHighlightStyle);
-        AddCard("Highlight style", "Use the native hover surface or a subtle in-progress sweep.", _highlightStyle);
+        AddCard(T("Highlight whole meeting"), T("Keep the active state until the scheduled meeting ends."), _highlightWholeMeeting);
+        _highlightStyle = Choice(new[] { T("Same as hover"), T("Animated shine") }, (int)_settings.WidgetHighlightStyle);
+        AddCard(T("Highlight style"), T("Use the native hover surface or a subtle in-progress sweep."), _highlightStyle);
 
-        AddSection("Windows Widgets Board (beta)");
+        AddSection(T("Windows Widgets Board (beta)"));
         _winWWidget = Toggle(_settings.EnableWinWWidget);
-        AddCard("Win+W widget", "Register MeetingBar in the native Windows 11 widget picker. After saving, press Win+W, choose Add widgets, then pin MeetingBar. Developer Mode is required by this portable package.", _winWWidget);
+        AddCard(T("Win+W widget"), T("Register MeetingBar in the native Windows 11 widget picker. After saving, press Win+W, choose Add widgets, then pin MeetingBar. Developer Mode is required by this portable package."), _winWWidget);
     }
 
     private Control BuildFullscreenAppEditor()
@@ -310,11 +335,11 @@ public sealed partial class MainWindow : Window
         pickerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         pickerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        _runningFullscreenApp = new ComboBox { PlaceholderText = "Choose an open app", DisplayMemberPath = nameof(RunningAppOption.Display), HorizontalAlignment = HorizontalAlignment.Stretch };
+        _runningFullscreenApp = new ComboBox { PlaceholderText = T("Choose an open app"), DisplayMemberPath = nameof(RunningAppOption.Display), HorizontalAlignment = HorizontalAlignment.Stretch };
         _runningFullscreenApp.SelectionChanged += (_, _) => { if (_addRunningFullscreenApp != null) _addRunningFullscreenApp.IsEnabled = _runningFullscreenApp.SelectedItem != null; };
         pickerRow.Children.Add(_runningFullscreenApp);
 
-        _addRunningFullscreenApp = new Button { Content = "Add", IsEnabled = false, MinWidth = 72 };
+        _addRunningFullscreenApp = new Button { Content = T("Add"), IsEnabled = false, MinWidth = 72 };
         _addRunningFullscreenApp.Click += (_, _) =>
         {
             if (_runningFullscreenApp?.SelectedItem is RunningAppOption app) AddFullscreenApp(app.Path);
@@ -323,14 +348,14 @@ public sealed partial class MainWindow : Window
         pickerRow.Children.Add(_addRunningFullscreenApp);
 
         var refresh = new Button { Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, Width = 40 };
-        AutomationProperties.SetName(refresh, "Refresh open applications");
-        ToolTipService.SetToolTip(refresh, "Refresh open applications");
+        AutomationProperties.SetName(refresh, T("Refresh open applications"));
+        ToolTipService.SetToolTip(refresh, T("Refresh open applications"));
         refresh.Click += (_, _) => RefreshRunningApps();
         Grid.SetColumn(refresh, 2);
         pickerRow.Children.Add(refresh);
         content.Children.Add(pickerRow);
 
-        var browse = new Button { Content = "Browse for an executable", HorizontalAlignment = HorizontalAlignment.Left };
+        var browse = new Button { Content = T("Browse for an executable"), HorizontalAlignment = HorizontalAlignment.Left };
         browse.Click += BrowseFullscreenApp_Click;
         content.Children.Add(browse);
 
@@ -381,7 +406,7 @@ public sealed partial class MainWindow : Window
         catch (Exception error)
         {
             SaveStatus.Severity = InfoBarSeverity.Error;
-            SaveStatus.Message = "Could not choose an application: " + error.Message;
+            SaveStatus.Message = T("Could not choose an application: {0}", error.Message);
             SaveStatus.IsOpen = true;
         }
     }
@@ -403,7 +428,7 @@ public sealed partial class MainWindow : Window
         var paths = (_settings.FullscreenAppBlacklist ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(System.IO.Path.GetFileName, StringComparer.CurrentCultureIgnoreCase).ToList();
         if (paths.Count == 0)
         {
-            _fullscreenAppList.Children.Add(new TextBlock { Text = "No apps added. Automatic fullscreen detection still works.", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
+            _fullscreenAppList.Children.Add(new TextBlock { Text = T("No apps added. Automatic fullscreen detection still works."), FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
             return;
         }
 
@@ -421,8 +446,8 @@ public sealed partial class MainWindow : Window
             Grid.SetColumn(label, 1);
             grid.Children.Add(label);
             var remove = new Button { Content = new FontIcon { Glyph = "\uE711", FontSize = 12 }, Width = 36, Height = 32, Padding = new Thickness(0) };
-            AutomationProperties.SetName(remove, "Remove " + System.IO.Path.GetFileNameWithoutExtension(path));
-            ToolTipService.SetToolTip(remove, "Remove");
+            AutomationProperties.SetName(remove, T("Remove {0}", System.IO.Path.GetFileNameWithoutExtension(path)));
+            ToolTipService.SetToolTip(remove, T("Remove"));
             remove.Click += (_, _) =>
             {
                 (_settings.FullscreenAppBlacklist ??= []).RemoveAll(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase));
@@ -437,109 +462,114 @@ public sealed partial class MainWindow : Window
 
     private void BuildEventsPage()
     {
-        AddHeader("Events", "Control which calendar events appear in MeetingBar.", "\uE8FD");
-        AddSection("Event filters");
-        _allDay = Toggle(_settings.ShowAllDayEvents); AddCard("All-day events", "Show events without a specific time.", _allDay);
-        _declined = Toggle(_settings.ShowDeclinedEvents); AddCard("Declined events", "Keep meetings you declined in the list.", _declined);
-        _tentative = Toggle(_settings.ShowTentativeEvents); AddCard("Tentative and pending events", "Include invitations that are not accepted yet.", _tentative);
-        _free = Toggle(_settings.ShowFreeEvents); AddCard("Free and non-busy events", "Include events that do not block your calendar.", _free);
-        _ignoreFreeTaskbar = Toggle(_settings.IgnoreFreeEventsInTaskbar); AddCard("Ignore free events in taskbar and reminders", "Keep free events in the expanded popup, but skip them for the taskbar, tray preview, and reminders.", _ignoreFreeTaskbar);
-        _requireLink = Toggle(_settings.RequireMeetingLink); AddCard("Require a meeting link", "Hide events that have no joinable video or web link.", _requireLink);
-        AddSection("Event list range");
-        _fullDayEventList = Toggle(_settings.ShowFullDayEventList); AddCard("Show complete days", "Show every event on each allowed day. When enabled, the hour values below affect only the timeline.", _fullDayEventList);
-        _includePastDay = Toggle(_settings.IncludePastDay); AddCard("Allow previous days", "Enable past-day pages and backward timeline scrubbing.", _includePastDay);
-        _includeNextDay = Toggle(_settings.IncludeNextDay); AddCard("Allow following days", "Enable future-day pages and forward timeline scrubbing.", _includeNextDay);
-        AddSection("Timeline range");
-        _timelinePastDays = Number(_settings.TimelinePastDays, 0, 30); AddCard("Days backward", "Maximum number of earlier days available while scrubbing.", _timelinePastDays);
-        _timelineFutureDays = Number(_settings.TimelineFutureDays, 0, 30); AddCard("Days forward", "Maximum number of later days available while scrubbing.", _timelineFutureDays);
-        _pastMeetingHours = Number(_settings.PastMeetingHours, 0, 168); AddCard("Past meetings", "Hours before now shown on today's timeline.", _pastMeetingHours);
-        _futureMeetingHours = Number(_settings.FutureMeetingHours, 1, 168); AddCard("Next meetings", "Hours after now shown on today's timeline.", _futureMeetingHours);
-        AddSection("Time format");
-        _use24HourClock = Toggle(_settings.Use24HourClock); AddCard("24-hour clock", "Use 13:30 instead of 1:30 PM throughout MeetingBar.", _use24HourClock);
-        _showTimelineDate = Toggle(_settings.ShowTimelineDate); AddCard("Show timeline date", "Display the scrubbed date at the top-right of the timeline.", _showTimelineDate);
-        _timelineDateFormat = Choice(TimelineDateChoices, Math.Max(0, Array.IndexOf(TimelineDatePatterns, _settings.TimelineDateFormat))); AddCard("Timeline date format", "Choose the full-date order and separators.", _timelineDateFormat);
-        _refreshMinutes = Number(_settings.RefreshMinutes, 1, 120); AddCard("Refresh interval", "Minutes between automatic calendar updates.", _refreshMinutes);
+        AddHeader(T("Events"), T("Control which calendar events appear in MeetingBar."), "\uE8FD");
+        AddSection(T("Event filters"));
+        _allDay = Toggle(_settings.ShowAllDayEvents); AddCard(T("All-day events"), T("Show events without a specific time."), _allDay);
+        _declined = Toggle(_settings.ShowDeclinedEvents); AddCard(T("Declined events"), T("Keep meetings you declined in the list."), _declined);
+        _tentative = Toggle(_settings.ShowTentativeEvents); AddCard(T("Tentative and pending events"), T("Include invitations that are not accepted yet."), _tentative);
+        _free = Toggle(_settings.ShowFreeEvents); AddCard(T("Free and non-busy events"), T("Include events that do not block your calendar."), _free);
+        _ignoreFreeTaskbar = Toggle(_settings.IgnoreFreeEventsInTaskbar); AddCard(T("Ignore free events in taskbar and reminders"), T("Keep free events in the expanded popup, but skip them for the taskbar, tray preview, and reminders."), _ignoreFreeTaskbar);
+        _requireLink = Toggle(_settings.RequireMeetingLink); AddCard(T("Require a meeting link"), T("Hide events that have no joinable video or web link."), _requireLink);
+        AddSection(T("Event list range"));
+        _fullDayEventList = Toggle(_settings.ShowFullDayEventList); AddCard(T("Show complete days"), T("Show every event on each allowed day. When enabled, the hour values below affect only the timeline."), _fullDayEventList);
+        _includePastDay = Toggle(_settings.IncludePastDay); AddCard(T("Allow previous days"), T("Enable past-day pages and backward timeline scrubbing."), _includePastDay);
+        _includeNextDay = Toggle(_settings.IncludeNextDay); AddCard(T("Allow following days"), T("Enable future-day pages and forward timeline scrubbing."), _includeNextDay);
+        AddSection(T("Timeline range"));
+        _timelinePastDays = Number(_settings.TimelinePastDays, 0, 30); AddCard(T("Days backward"), T("Maximum number of earlier days available while scrubbing."), _timelinePastDays);
+        _timelineFutureDays = Number(_settings.TimelineFutureDays, 0, 30); AddCard(T("Days forward"), T("Maximum number of later days available while scrubbing."), _timelineFutureDays);
+        _pastMeetingHours = Number(_settings.PastMeetingHours, 0, 168); AddCard(T("Past meetings"), T("Hours before now shown on today's timeline."), _pastMeetingHours);
+        _futureMeetingHours = Number(_settings.FutureMeetingHours, 1, 168); AddCard(T("Next meetings"), T("Hours after now shown on today's timeline."), _futureMeetingHours);
+        AddSection(T("Time format"));
+        _use24HourClock = Toggle(_settings.Use24HourClock); AddCard(T("24-hour clock"), T("Use 13:30 instead of 1:30 PM throughout MeetingBar."), _use24HourClock);
+        _showTimelineDate = Toggle(_settings.ShowTimelineDate); AddCard(T("Show timeline date"), T("Display the scrubbed date at the top-right of the timeline."), _showTimelineDate);
+        _timelineDateFormat = Choice(TimelineDatePatterns.Select(x => new DateTime(2026, 12, 31).ToString(x, FormatCulture) + "  (" + x + ")"), Math.Max(0, Array.IndexOf(TimelineDatePatterns, _settings.TimelineDateFormat))); AddCard(T("Timeline date format"), T("Choose the full-date order and separators."), _timelineDateFormat);
+        _refreshMinutes = Number(_settings.RefreshMinutes, 1, 120); AddCard(T("Refresh interval"), T("Minutes between automatic calendar updates."), _refreshMinutes);
     }
 
     private void BuildRemindersPage()
     {
-        AddHeader("Reminders", "Choose when MeetingBar alerts or joins for you.", "\uEA8F");
-        AddSection("Notifications");
-        _notify = Toggle(_settings.NotifyBeforeMeeting); AddCard("Meeting notifications", "Show Windows notifications at every selected time.", _notify);
+        AddHeader(T("Reminders"), T("Choose when MeetingBar alerts or joins for you."), "\uEA8F");
+        AddSection(T("Notifications"));
+        _notify = Toggle(_settings.NotifyBeforeMeeting); AddCard(T("Meeting notifications"), T("Show Windows notifications at every selected time."), _notify);
         _notificationChecks.Clear();
         IEnumerable<int> configured = _settings.NotificationScheduleVersion < 1 ? new[] { _settings.NotifyMinutesBefore } : _settings.NotificationMinutesBefore ?? new List<int>();
         var notificationTimes = new[] { 60, 30, 15, 10, 5, 0 }.Concat(configured).Where(x => x >= 0 && x <= 120).Distinct().OrderByDescending(x => x);
         var notificationChoices = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var minutes in notificationTimes)
         {
-            var choice = new CheckBox { Content = minutes == 0 ? "At meeting start" : minutes + " minutes before", IsChecked = configured?.Contains(minutes) == true, HorizontalAlignment = HorizontalAlignment.Right };
+            var choice = new CheckBox { Content = minutes == 0 ? T("At meeting start") : T("{0} minutes before", minutes), IsChecked = configured?.Contains(minutes) == true, HorizontalAlignment = HorizontalAlignment.Right };
             _notificationChecks[minutes] = choice;
             notificationChoices.Children.Add(choice);
         }
-        AddCard("Notification times", "Select multiple reminders, for example 5 minutes before and at meeting start.", notificationChoices);
-        _fullScreen = Toggle(_settings.FullscreenReminder); AddCard("Full-screen reminder", "Show a prominent meeting reminder with a join action.", _fullScreen);
-        _notifyEnd = Toggle(_settings.NotifyAtEnd); AddCard("Meeting-end notification", "Notify when the scheduled meeting time ends.", _notifyEnd);
-        AddSection("Automation");
-        _autoJoin = Toggle(_settings.AutoJoin); AddCard("Automatically join meetings", "Open a detected meeting link at the configured time.", _autoJoin);
-        _autoJoinBefore = Number(_settings.AutoJoinMinutesBefore, 0, 30); AddCard("Join lead time", "Minutes before the meeting starts.", _autoJoinBefore);
-        _hotkey = Toggle(_settings.GlobalJoinHotkey); AddCard("Global join shortcut", "Ctrl+Alt+J joins the nearest meeting.", _hotkey);
+        AddCard(T("Notification times"), T("Select multiple reminders, for example 5 minutes before and at meeting start."), notificationChoices);
+        _fullScreen = Toggle(_settings.FullscreenReminder); AddCard(T("Full-screen reminder"), T("Show a prominent meeting reminder with a join action."), _fullScreen);
+        _notifyEnd = Toggle(_settings.NotifyAtEnd); AddCard(T("Meeting-end notification"), T("Notify when the scheduled meeting time ends."), _notifyEnd);
+        AddSection(T("Automation"));
+        _autoJoin = Toggle(_settings.AutoJoin); AddCard(T("Automatically join meetings"), T("Open a detected meeting link at the configured time."), _autoJoin);
+        _autoJoinBefore = Number(_settings.AutoJoinMinutesBefore, 0, 30); AddCard(T("Join lead time"), T("Minutes before the meeting starts."), _autoJoinBefore);
+        _hotkey = Toggle(_settings.GlobalJoinHotkey); AddCard(T("Global join shortcut"), T("Ctrl+Alt+J joins the nearest meeting."), _hotkey);
     }
 
     private void BuildGeneralPage()
     {
-        AddHeader("General", "App startup, privacy, and Windows integration.", "\uE713");
-        AddSection("App behavior");
+        AddHeader(T("General"), T("Language, app startup, privacy, and Windows integration."), "\uE713");
+        AddSection(T("Language"));
+        var windowsLanguage = Languages.First(x => x.Tag == (Supported(System.Globalization.CultureInfo.CurrentUICulture.Name) ?? DefaultLanguage));
+        var selectedLanguage = Languages.ToList().FindIndex(x => x.Tag == Supported(_settings.Language));
+        _language = Choice(new[] { T("Windows default ({0})", windowsLanguage.NativeName) }.Concat(Languages.Select(x => x.NativeName)), selectedLanguage + 1);
+        AddCard(T("App language"), T("Used by the taskbar widget, popup, notifications, and settings. Applies after saving."), _language);
+        AddSection(T("App behavior"));
         _startWithWindows = Toggle(_settings.StartWithWindows);
-        AddCard("Start MeetingBar with Windows", "Launch the tray and taskbar surfaces when you sign in.", _startWithWindows);
-        AddSection("Privacy");
-        AddCard("Calendar data stays on this PC", "Google tokens are encrypted with Windows Data Protection for the signed-in user.");
-        AddCard("Diagnostics", "Provider results and crash details are stored locally without event titles or meeting URLs.");
+        AddCard(T("Start MeetingBar with Windows"), T("Launch the tray and taskbar surfaces when you sign in."), _startWithWindows);
+        AddSection(T("Privacy"));
+        AddCard(T("Calendar data stays on this PC"), T("Google tokens are encrypted with Windows Data Protection for the signed-in user."));
+        AddCard(T("Diagnostics"), T("Provider results and crash details are stored locally without event titles or meeting URLs."));
     }
 
     private void BuildDebugPage()
     {
-        AddHeader("Debug", "Inject local-only meetings and trigger UI states without changing a real calendar.", "\uE9D9");
-        AddSection("Test event");
-        _debugTitle = TextEntry("Test meeting");
-        AddCard("Title", "Displayed in the taskbar widget, popup, and reminders.", _debugTitle);
-        _debugService = Choice(new[] { "Google Meet", "Microsoft Teams", "Zoom", "No meeting link" }, 0);
-        AddCard("Meeting service", "Selects the join icon and test link behavior.", _debugService);
+        AddHeader(T("Debug"), T("Inject local-only meetings and trigger UI states without changing a real calendar."), "\uE9D9");
+        AddSection(T("Test event"));
+        _debugTitle = TextEntry(T("Test meeting"));
+        AddCard(T("Title"), T("Displayed in the taskbar widget, popup, and reminders."), _debugTitle);
+        _debugService = Choice(DebugServices.Take(3).Append(T("No meeting link")), 0);
+        AddCard(T("Meeting service"), T("Selects the join icon and test link behavior."), _debugService);
         _debugStartMinutes = Number(5, -1440, 1440);
-        AddCard("Starts in", "Minutes from now. Use a negative value for an ongoing or past event.", _debugStartMinutes);
+        AddCard(T("Starts in"), T("Minutes from now. Use a negative value for an ongoing or past event."), _debugStartMinutes);
         _debugDurationMinutes = Number(30, 1, 1440);
-        AddCard("Duration", "Meeting duration in minutes.", _debugDurationMinutes);
+        AddCard(T("Duration"), T("Meeting duration in minutes."), _debugDurationMinutes);
         _debugColor = TextEntry("#0078D4", 180);
-        AddCard("Calendar color", "Hex color used by the event, tray icon, widget, and timeline.", _debugColor);
+        AddCard(T("Calendar color"), T("Hex color used by the event, tray icon, widget, and timeline."), _debugColor);
 
-        AddSection("Actions");
+        AddSection(T("Actions"));
         var actions = new WrapPanel();
-        var inject = new Button { Content = "Inject event", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        var inject = new Button { Content = T("Inject event"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         inject.Click += DebugInject_Click;
-        var notification = new Button { Content = "Test notification" };
+        var notification = new Button { Content = T("Test notification") };
         notification.Click += DebugNotification_Click;
-        var reminder = new Button { Content = "Test reminder" };
+        var reminder = new Button { Content = T("Test reminder") };
         reminder.Click += DebugReminder_Click;
-        var clear = new Button { Content = "Clear events" };
+        var clear = new Button { Content = T("Clear events") };
         clear.Click += DebugClear_Click;
         actions.Children.Add(inject); actions.Children.Add(notification); actions.Children.Add(reminder); actions.Children.Add(clear);
-        AddCard("Run debug action", "Injected events live only until MeetingBar exits or Clear events is pressed.", actions);
-        _debugStatus = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Informational, Message = "Ready. Debug events never write to your calendar.", Margin = new Thickness(0, 10, 0, 0) };
+        AddCard(T("Run debug action"), T("Injected events live only until MeetingBar exits or Clear events is pressed."), actions);
+        _debugStatus = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Informational, Message = T("Ready. Debug events never write to your calendar."), Margin = new Thickness(0, 10, 0, 0) };
         PagePanel.Children.Add(_debugStatus);
     }
 
     private DebugRequest CurrentDebugRequest() => new()
     {
-        Title = _debugTitle?.Text.Trim() ?? "Test meeting",
+        Title = _debugTitle?.Text.Trim() ?? T("Test meeting"),
         StartMinutes = (int)Finite(_debugStartMinutes?.Value ?? 5, 5),
         DurationMinutes = (int)Finite(_debugDurationMinutes?.Value ?? 30, 30),
-        Service = _debugService?.SelectedItem?.ToString() ?? "Google Meet",
+        Service = DebugServices[Math.Max(0, _debugService?.SelectedIndex ?? 0)],
         Color = _debugColor?.Text.Trim() ?? "#0078D4"
     };
 
-    private async void DebugInject_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-inject", "Test event injected into the widget and popup.", true);
-    private async void DebugNotification_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-notification", "Test notification triggered.", false);
-    private async void DebugReminder_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-reminder", "Test full-screen reminder triggered.", false);
-    private async void DebugClear_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-clear", "All injected events cleared.", false);
+    private async void DebugInject_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-inject", T("Test event injected into the widget and popup."), true);
+    private async void DebugNotification_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-notification", T("Test notification triggered."), false);
+    private async void DebugReminder_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-reminder", T("Test full-screen reminder triggered."), false);
+    private async void DebugClear_Click(object sender, RoutedEventArgs e) => await RunDebugCommand("debug-clear", T("All injected events cleared."), false);
 
     private async Task RunDebugCommand(string command, string success, bool saveRequest)
     {
@@ -557,28 +587,28 @@ public sealed partial class MainWindow : Window
 
     private void BuildMeetingsPage()
     {
-        AddHeader("Meetings", "Choose how links open and keep recurring rooms nearby.", "\uE714");
-        AddSection("Opening");
-        _browserPath = TextEntry(_settings.PreferredBrowserPath); AddCard("Preferred browser executable", "Leave blank to use the Windows default browser.", _browserPath);
-        _browserArgs = TextEntry(_settings.PreferredBrowserArguments); AddCard("Browser arguments", "Use {url} where MeetingBar should insert the meeting link.", _browserArgs);
-        _createUrl = TextEntry(_settings.CreateMeetingUrl); AddCard("Create meeting URL", "Opened by the Create meeting button.", _createUrl);
+        AddHeader(T("Meetings"), T("Choose how links open and keep recurring rooms nearby."), "\uE714");
+        AddSection(T("Opening"));
+        _browserPath = TextEntry(_settings.PreferredBrowserPath); AddCard(T("Preferred browser executable"), T("Leave blank to use the Windows default browser."), _browserPath);
+        _browserArgs = TextEntry(_settings.PreferredBrowserArguments); AddCard(T("Browser arguments"), T("Use {url} where MeetingBar should insert the meeting link."), _browserArgs);
+        _createUrl = TextEntry(_settings.CreateMeetingUrl); AddCard(T("Create meeting URL"), T("Opened by the Create meeting button."), _createUrl);
         _mapProvider = Choice(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, Math.Max(0, Array.IndexOf(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, _settings.MapProvider)));
-        AddCard("Map provider", "Used by the event-details location button.", _mapProvider);
+        AddCard(T("Map provider"), T("Used by the event-details location button."), _mapProvider);
 
         var heading = new Grid { Margin = new Thickness(0, 24, 0, 9) };
         heading.ColumnDefinitions.Add(new ColumnDefinition()); heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        heading.Children.Add(new TextBlock { Text = "Bookmarks", FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
-        var add = new Button { Content = "Add bookmark" }; add.Click += AddBookmark_Click; Grid.SetColumn(add, 1); heading.Children.Add(add); PagePanel.Children.Add(heading);
+        heading.Children.Add(new TextBlock { Text = T("Bookmarks"), FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+        var add = new Button { Content = T("Add bookmark") }; add.Click += AddBookmark_Click; Grid.SetColumn(add, 1); heading.Children.Add(add); PagePanel.Children.Add(heading);
         _bookmarkEditors.Clear();
         foreach (var bookmark in _settings.Bookmarks) AddBookmarkCard(bookmark);
-        if (_settings.Bookmarks.Count == 0) AddCard("No bookmarks", "Add a recurring meeting room for one-click access.");
+        if (_settings.Bookmarks.Count == 0) AddCard(T("No bookmarks"), T("Add a recurring meeting room for one-click access."));
     }
 
     private void AddBookmarkCard(Bookmark bookmark)
     {
         var name = TextEntry(bookmark.Name, 0);
         var url = TextEntry(bookmark.Url, 0);
-        var remove = new Button { Content = "Remove", Tag = bookmark };
+        var remove = new Button { Content = T("Remove"), Tag = bookmark };
         remove.Click += RemoveBookmark_Click;
         var controls = new Grid { ColumnSpacing = 8 };
         controls.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
@@ -586,14 +616,14 @@ public sealed partial class MainWindow : Window
         controls.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(url, 1); Grid.SetColumn(remove, 2);
         controls.Children.Add(name); controls.Children.Add(url); controls.Children.Add(remove);
-        AddWideCard("Meeting bookmark", "Name and join URL", controls);
+        AddWideCard(T("Meeting bookmark"), T("Name and join URL"), controls);
         _bookmarkEditors.Add((name, url));
     }
 
     private void AddBookmark_Click(object sender, RoutedEventArgs e)
     {
         CaptureCurrentPage();
-        _settings.Bookmarks.Add(new Bookmark { Name = "New meeting", Url = "https://" });
+        _settings.Bookmarks.Add(new Bookmark { Name = T("New meeting"), Url = "https://" });
         _page = "";
         ShowPage("Meetings");
     }
@@ -609,30 +639,30 @@ public sealed partial class MainWindow : Window
 
     private void BuildCalendarsPage()
     {
-        AddHeader("Calendars", "Combine multiple providers and accounts, then choose which calendars are visible.", "\uE787");
-        AddSection("Calendar sources");
+        AddHeader(T("Calendars"), T("Combine multiple providers and accounts, then choose which calendars are visible."), "\uE787");
+        AddSection(T("Calendar sources"));
         var addButtons = new WrapPanel();
-        var addOutlook = new Button { Content = "Add Outlook", IsEnabled = !_settings.CalendarSources.Any(x => x.Provider == CalendarProviderKind.Outlook) };
+        var addOutlook = new Button { Content = T("Add Outlook"), IsEnabled = !_settings.CalendarSources.Any(x => x.Provider == CalendarProviderKind.Outlook) };
         addOutlook.Click += AddOutlookSource_Click;
-        var addIcs = new Button { Content = "Add ICS" }; addIcs.Click += AddIcsSource_Click;
-        var addGoogle = new Button { Content = "Add Google account", Style = (Style)Application.Current.Resources["AccentButtonStyle"] }; addGoogle.Click += AddGoogleSource_Click;
+        var addIcs = new Button { Content = T("Add ICS") }; addIcs.Click += AddIcsSource_Click;
+        var addGoogle = new Button { Content = T("Add Google account"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] }; addGoogle.Click += AddGoogleSource_Click;
         addButtons.Children.Add(addOutlook); addButtons.Children.Add(addIcs); addButtons.Children.Add(addGoogle);
-        AddCard("Add a calendar source", "Google accounts share the OAuth client below but keep separate encrypted sign-in tokens. Classic Outlook can be added once because its local API already returns every Outlook store.", addButtons);
+        AddCard(T("Add a calendar source"), T("Google accounts share the OAuth client below but keep separate encrypted sign-in tokens. Classic Outlook can be added once because its local API already returns every Outlook store."), addButtons);
 
         _calendarSourceEditors.Clear();
         _googleStatuses.Clear();
         var state = SettingsStore.LoadState();
         foreach (var source in _settings.CalendarSources) BuildCalendarSourceCard(source, state);
-        if (_settings.CalendarSources.Count == 0) AddCard("No calendar sources", "Add Outlook, an ICS feed, or a Google account to begin.");
+        if (_settings.CalendarSources.Count == 0) AddCard(T("No calendar sources"), T("Add Outlook, an ICS feed, or a Google account to begin."));
 
-        AddSection("Shared Google OAuth setup");
+        AddSection(T("Shared Google OAuth setup"));
         BuildGoogleSetup();
 
-        AddSection("Visible calendars");
+        AddSection(T("Visible calendars"));
         _calendarChecks.Clear();
         if (state.Calendars.Count == 0)
         {
-            AddCard("No calendars loaded yet", "Save, connect any Google accounts, then refresh MeetingBar.");
+            AddCard(T("No calendars loaded yet"), T("Save, connect any Google accounts, then refresh MeetingBar."));
         }
         else
         {
@@ -646,7 +676,7 @@ public sealed partial class MainWindow : Window
                     var selected = !source.CalendarSelectionConfigured || source.SelectedCalendarIds.Contains(calendar.Id);
                     var check = new CheckBox { IsChecked = selected, Content = calendar.Name, MinWidth = 260 };
                     _calendarChecks[CalendarKey(source.Id, calendar.Id)] = check;
-                    AddCard(calendar.Name, calendar.SourceKind + " · Calendar color " + calendar.Color, check);
+                    AddCard(calendar.Name, T("{0} · Calendar color {1}", calendar.SourceKind, calendar.Color), check);
                 }
             }
         }
@@ -655,24 +685,24 @@ public sealed partial class MainWindow : Window
     private void BuildCalendarSourceCard(CalendarSourceSettings source, SettingsState state)
     {
         var body = new StackPanel { Spacing = 10 };
-        var title = source.Provider switch { CalendarProviderKind.Ics => "ICS files or feeds", CalendarProviderKind.Google => "Google Calendar", _ => "Classic Outlook" };
+        var title = source.Provider switch { CalendarProviderKind.Ics => T("ICS files or feeds"), CalendarProviderKind.Google => T("Google Calendar"), _ => T("Classic Outlook") };
         body.Children.Add(new TextBlock { Text = title, FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        var name = new TextBox { Text = source.Name, Header = "Display name" };
-        var enabled = new ToggleSwitch { IsOn = source.Enabled, Header = "Include this source", OnContent = "On", OffContent = "Off" };
+        var name = new TextBox { Text = source.Name, Header = T("Display name") };
+        var enabled = new ToggleSwitch { IsOn = source.Enabled, Header = T("Include this source"), OnContent = T("On"), OffContent = T("Off") };
         body.Children.Add(name); body.Children.Add(enabled);
         TextBox? icsSources = null;
         if (source.Provider == CalendarProviderKind.Ics)
         {
-            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files, HTTPS URLs, and webcal:// links (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 90 };
+            icsSources = new TextBox { Text = source.IcsSources, Header = T("ICS files, HTTPS URLs, and webcal:// links (one per line)"), AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 90 };
             body.Children.Add(icsSources);
         }
         if (source.Provider == CalendarProviderKind.Google)
         {
-            body.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Not connected" : "Account: " + source.GoogleAccountEmail, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
+            body.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? T("Not connected") : T("Account: {0}", source.GoogleAccountEmail), Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
             var buttons = new WrapPanel();
-            var connect = new Button { Content = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Connect account" : "Reconnect / change account", Tag = source.Id, Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+            var connect = new Button { Content = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? T("Connect account") : T("Reconnect / change account"), Tag = source.Id, Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
             connect.Click += ConnectGoogle_Click;
-            var disconnect = new Button { Content = "Disconnect", Tag = source.Id, IsEnabled = !string.IsNullOrWhiteSpace(source.GoogleRefreshTokenProtected) };
+            var disconnect = new Button { Content = T("Disconnect"), Tag = source.Id, IsEnabled = !string.IsNullOrWhiteSpace(source.GoogleRefreshTokenProtected) };
             disconnect.Click += DisconnectGoogle_Click;
             buttons.Children.Add(connect); buttons.Children.Add(disconnect); body.Children.Add(buttons);
             var active = string.Equals(state.ActiveSourceId, source.Id, StringComparison.OrdinalIgnoreCase);
@@ -681,12 +711,12 @@ public sealed partial class MainWindow : Window
                 IsOpen = active || !string.IsNullOrWhiteSpace(source.GoogleAccountEmail),
                 IsClosable = false,
                 Severity = active && state.IsBusy ? InfoBarSeverity.Informational : string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
-                Message = active && !string.IsNullOrWhiteSpace(state.StatusMessage) ? state.StatusMessage : string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Not connected" : "Connected as " + source.GoogleAccountEmail
+                Message = active && !string.IsNullOrWhiteSpace(state.StatusMessage) ? state.StatusMessage : string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? T("Not connected") : T("Connected as {0}", source.GoogleAccountEmail)
             };
             _googleStatuses[source.Id] = status;
             body.Children.Add(status);
         }
-        var remove = new Button { Content = "Remove source", Tag = source.Id, HorizontalAlignment = HorizontalAlignment.Right };
+        var remove = new Button { Content = T("Remove source"), Tag = source.Id, HorizontalAlignment = HorizontalAlignment.Right };
         remove.Click += RemoveCalendarSource_Click; body.Children.Add(remove);
         _calendarSourceEditors[source.Id] = new CalendarSourceEditor { Name = name, Enabled = enabled, IcsSources = icsSources };
         var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"] };
@@ -703,21 +733,21 @@ public sealed partial class MainWindow : Window
             {
                 Children =
                 {
-                    new TextBlock { Text = "Google OAuth client", FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
-                    new TextBlock { Text = "One client configuration for every Google account · read-only access", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush"), TextWrapping = TextWrapping.Wrap }
+                    new TextBlock { Text = T("Google OAuth client"), FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
+                    new TextBlock { Text = T("One client configuration for every Google account · read-only access"), FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush"), TextWrapping = TextWrapping.Wrap }
                 }
             }
         };
         var body = new StackPanel { Spacing = 12, Margin = new Thickness(0, 10, 0, 6) };
-        body.Children.Add(new TextBlock { Text = "MeetingBar never sees your Google password. Google asks for read-only calendar access in your browser.", TextWrapping = TextWrapping.Wrap, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
-        body.Children.Add(GoogleStep("1", "Create or select a Google Cloud project", "Open Google Cloud projects", "https://console.cloud.google.com/projectselector2/home/dashboard"));
-        body.Children.Add(GoogleStep("2", "Enable the Google Calendar API in that same project", "Open Calendar API page", "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"));
-        body.Children.Add(GoogleStep("3", "Configure OAuth consent, add yourself as a test user if needed, and grant calendar.readonly under Data Access", "Open OAuth consent", "https://console.cloud.google.com/auth/overview"));
-        body.Children.Add(new TextBox { Text = "https://www.googleapis.com/auth/calendar.readonly", IsReadOnly = true, Header = "Required Google scope" });
-        body.Children.Add(GoogleStep("4", "Create an OAuth client of type Desktop app. No redirect URL is needed.", "Open OAuth clients", "https://console.cloud.google.com/auth/clients"));
-        _googleClientId = new TextBox { Text = _settings.GoogleClientId, Header = "Desktop app client ID", PlaceholderText = "…apps.googleusercontent.com" };
+        body.Children.Add(new TextBlock { Text = T("MeetingBar never sees your Google password. Google asks for read-only calendar access in your browser."), TextWrapping = TextWrapping.Wrap, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
+        body.Children.Add(GoogleStep("1", T("Create or select a Google Cloud project"), T("Open Google Cloud projects"), "https://console.cloud.google.com/projectselector2/home/dashboard"));
+        body.Children.Add(GoogleStep("2", T("Enable the Google Calendar API in that same project"), T("Open Calendar API page"), "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"));
+        body.Children.Add(GoogleStep("3", T("Configure OAuth consent, add yourself as a test user if needed, and grant calendar.readonly under Data Access"), T("Open OAuth consent"), "https://console.cloud.google.com/auth/overview"));
+        body.Children.Add(new TextBox { Text = "https://www.googleapis.com/auth/calendar.readonly", IsReadOnly = true, Header = T("Required Google scope") });
+        body.Children.Add(GoogleStep("4", T("Create an OAuth client of type Desktop app. No redirect URL is needed."), T("Open OAuth clients"), "https://console.cloud.google.com/auth/clients"));
+        _googleClientId = new TextBox { Text = _settings.GoogleClientId, Header = T("Desktop app client ID"), PlaceholderText = "…apps.googleusercontent.com" };
         body.Children.Add(_googleClientId);
-        _googleClientSecret = new PasswordBox { Password = _settings.GoogleClientSecret, Header = "Client secret (hidden)", PasswordRevealMode = PasswordRevealMode.Hidden };
+        _googleClientSecret = new PasswordBox { Password = _settings.GoogleClientSecret, Header = T("Client secret (hidden)"), PasswordRevealMode = PasswordRevealMode.Hidden };
         body.Children.Add(_googleClientSecret);
         expander.Content = body;
         var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"], Padding = new Thickness(8, 2, 8, 2) };
@@ -751,13 +781,13 @@ public sealed partial class MainWindow : Window
         if (sender is not Button { Tag: string sourceId }) return;
         if (string.IsNullOrWhiteSpace(_settings.GoogleClientId) || !_settings.GoogleClientId.EndsWith(".apps.googleusercontent.com", StringComparison.OrdinalIgnoreCase))
         {
-            if (_googleStatuses.TryGetValue(sourceId, out var invalidStatus)) { invalidStatus.IsOpen = true; invalidStatus.Severity = InfoBarSeverity.Error; invalidStatus.Message = "Enter the Desktop app client ID ending in .apps.googleusercontent.com below."; }
+            if (_googleStatuses.TryGetValue(sourceId, out var invalidStatus)) { invalidStatus.IsOpen = true; invalidStatus.Severity = InfoBarSeverity.Error; invalidStatus.Message = T("Enter the Desktop app client ID ending in .apps.googleusercontent.com below."); }
             return;
         }
         try
         {
             SettingsStore.Save(_settings);
-            if (_googleStatuses.TryGetValue(sourceId, out var status)) { status.IsOpen = true; status.Severity = InfoBarSeverity.Informational; status.Message = "Opening Google sign-in…"; }
+            if (_googleStatuses.TryGetValue(sourceId, out var status)) { status.IsOpen = true; status.Severity = InfoBarSeverity.Informational; status.Message = T("Opening Google sign-in…"); }
             await SettingsStore.SendCommandAsync("connect-google|" + sourceId);
         }
         catch (Exception error)
@@ -811,11 +841,12 @@ public sealed partial class MainWindow : Window
         try
         {
             SettingsStore.Save(_settings);
+            Localizer.SetLanguage(_settings.Language);
             var widgetStatus = await WinWWidgetRegistration.ApplyAsync(_settings.EnableWinWWidget);
             widgetRegistrationCompleted = true;
             await SettingsStore.SendCommandAsync("reload");
             SaveStatus.Severity = InfoBarSeverity.Success;
-            SaveStatus.Message = string.IsNullOrWhiteSpace(widgetStatus) ? "Settings saved and reloaded" : widgetStatus;
+            SaveStatus.Message = string.IsNullOrWhiteSpace(widgetStatus) ? T("Settings saved and reloaded") : widgetStatus;
             SaveStatus.IsOpen = true;
             var hide = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.2) };
             hide.Tick += (_, _) => { hide.Stop(); SaveStatus.IsOpen = false; };
@@ -831,7 +862,7 @@ public sealed partial class MainWindow : Window
                 try { await SettingsStore.SendCommandAsync("reload"); } catch { }
             }
             SaveStatus.Severity = InfoBarSeverity.Error;
-            SaveStatus.Message = "Could not reload MeetingBar: " + error.Message;
+            SaveStatus.Message = T("Could not reload MeetingBar: {0}", error.Message);
             SaveStatus.IsOpen = true;
         }
     }
@@ -921,6 +952,7 @@ public sealed partial class MainWindow : Window
                 if (_hotkey != null) _settings.GlobalJoinHotkey = _hotkey.IsOn;
                 break;
             case "General":
+                if (_language != null) _settings.Language = _language.SelectedIndex <= 0 ? "" : Languages[_language.SelectedIndex - 1].Tag;
                 if (_startWithWindows != null) _settings.StartWithWindows = _startWithWindows.IsOn;
                 break;
         }
@@ -937,8 +969,8 @@ public sealed partial class MainWindow : Window
         if (_page == "Calendars" && !string.IsNullOrWhiteSpace(state.ActiveSourceId) && _googleStatuses.TryGetValue(state.ActiveSourceId, out var status))
         {
             status.IsOpen = true;
-            status.Message = string.IsNullOrWhiteSpace(state.StatusMessage) ? "Not connected" : state.StatusMessage;
-            status.Severity = state.IsBusy ? InfoBarSeverity.Informational : state.StatusMessage.StartsWith("Connected as ", StringComparison.OrdinalIgnoreCase) ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+            status.Message = string.IsNullOrWhiteSpace(state.StatusMessage) ? T("Not connected") : state.StatusMessage;
+            status.Severity = state.IsBusy ? InfoBarSeverity.Informational : state.Succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error;
         }
         if (!state.IsBusy && !string.IsNullOrWhiteSpace(state.ActiveSourceId))
         {

@@ -37,6 +37,7 @@
     <Resource Include="Resources\MeetingServices\*.png" />
     <Resource Include="Resources\Emoji\twemoji-atlas.png" />
     <Resource Include="Resources\Emoji\twemoji-map.txt" />
+    <EmbeddedResource Include="Localization\*.json" Exclude="Localization\en.json"><LogicalName>MeetingBar.Localization.%(Filename).json</LogicalName></EmbeddedResource>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -65,6 +66,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
+    <Compile Include="Localization\Localizer.cs" />
     <Compile Include="Models\CalendarEvent.cs" />
     <Compile Include="Models\CalendarInfo.cs" />
     <Compile Include="Models\AppSettings.cs" />
@@ -97,6 +99,7 @@
     <Compile Include="Views\EmojiTokenizer.cs" />
     <Compile Include="Views\AutoHideScrollViewer.cs" />
     <Compile Include="Views\LucideIcon.cs" />
+    <Compile Include="Views\LocExtension.cs" />
     <Compile Include="Views\PopupWindow.xaml.cs"><DependentUpon>PopupWindow.xaml</DependentUpon></Compile>
     <Compile Include="Views\TaskbarWidgetWindow.xaml.cs"><DependentUpon>TaskbarWidgetWindow.xaml</DependentUpon></Compile>
     <Compile Include="Views\ReminderWindow.xaml.cs"><DependentUpon>ReminderWindow.xaml</DependentUpon></Compile>

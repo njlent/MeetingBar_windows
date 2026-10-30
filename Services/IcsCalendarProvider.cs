@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using MeetingBar.Windows.Models;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -82,7 +83,7 @@ namespace MeetingBar.Windows.Services
             string Get(string key) => f.ContainsKey(key) ? Unescape(f[key]) : null;
             return new CalendarEvent
             {
-                Id = Get("UID") ?? Guid.NewGuid().ToString("N"), Title = Get("SUMMARY") ?? "Untitled event", Notes = Get("DESCRIPTION"),
+                Id = Get("UID") ?? Guid.NewGuid().ToString("N"), Title = Get("SUMMARY") ?? T("Untitled event"), Notes = Get("DESCRIPTION"),
                 Location = Get("LOCATION"), EventUrl = Get("URL"), ConferenceUrl = Get("CONFERENCE"), Organizer = Get("ORGANIZER"),
                 CalendarId = calendarId, CalendarName = calendarName, CalendarColor = color, Start = start, End = end, IsAllDay = allDay,
                 IsCancelled = string.Equals(Get("STATUS"), "CANCELLED", StringComparison.OrdinalIgnoreCase),
