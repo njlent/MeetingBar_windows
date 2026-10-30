@@ -6,6 +6,14 @@
 
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
+### Fixed
+
+<!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
+
+## 0.1.1 - 2026-10-30
+
+### Added
+
 - Added simultaneous multi-provider calendar sources, multiple Google and ICS accounts, shared Google OAuth client configuration with per-account encrypted tokens, per-source calendar selection, and automatic migration from the previous single-provider settings.
 - Added `webcal://` and `webcals://` subscription links for ICS calendar sources, fetched securely over HTTPS.
 - Added packaged Raycast for Windows Script Commands and a complete setup and troubleshooting guide.
@@ -14,8 +22,6 @@
 - Added translations for German, Spanish, French, Italian, Dutch, Polish, Brazilian Portuguese, Turkish, Russian, Japanese, Korean, and Simplified and Traditional Chinese across the taskbar widget, popup, notifications, reminders, Win+W widget, and Settings, with a language override under Settings > General > Language (#21).
 
 ### Fixed
-
-<!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
 - Prevented meetings marked as free from sending reminders when free events were ignored in the taskbar.
 - Kept the popup's current meeting synchronized with the taskbar widget when events were ignored or filtered.
