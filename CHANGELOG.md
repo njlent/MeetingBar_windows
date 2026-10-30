@@ -11,6 +11,7 @@
 - Added packaged Raycast for Windows Script Commands and a complete setup and troubleshooting guide.
 - Added configurable end-of-day taskbar behavior to hide the widget, show a standard or custom message, or keep showing the next event.
 - Added optional taskbar-widget hiding for fullscreen apps, with automatic foreground detection and an app list populated from open applications or an executable picker.
+- Added translations for German, Spanish, French, Italian, Dutch, Polish, Brazilian Portuguese, Turkish, Russian, Japanese, Korean, and Simplified and Traditional Chinese across the taskbar widget, popup, notifications, reminders, Win+W widget, and Settings, with a language override under Settings > General > Language (#21).
 
 ### Fixed
 

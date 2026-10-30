@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using MeetingBar.Windows.Models;
+using static MeetingBar.Localization.Localizer;
 
 namespace MeetingBar.Windows.Services
 {
@@ -20,7 +21,7 @@ namespace MeetingBar.Windows.Services
             var calendars = new List<CalendarInfo>();
             var events = new List<CalendarEvent>();
             var outlookType = Type.GetTypeFromProgID("Outlook.Application");
-            if (outlookType == null) throw new InvalidOperationException("Classic Outlook desktop is not installed. Choose ICS or Google Calendar in Settings.");
+            if (outlookType == null) throw new InvalidOperationException(T("Classic Outlook desktop is not installed. Choose ICS or Google Calendar in Settings."));
             object app = null, session = null, stores = null;
             try
             {
@@ -98,7 +99,7 @@ namespace MeetingBar.Windows.Services
                         output.Add(new CalendarEvent
                         {
                             Id = SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"),
-                            Title = SafeString(() => Get(item, "Subject")) ?? "Untitled event", Notes = body, Location = location,
+                            Title = SafeString(() => Get(item, "Subject")) ?? T("Untitled event"), Notes = body, Location = location,
                             ConferenceUrl = itemUrl, CalendarId = id, CalendarName = name, CalendarColor = color,
                             Organizer = SafeString(() => Get(item, "Organizer")), Start = start, End = end,
                             IsAllDay = SafeBool(() => Get(item, "AllDayEvent")), IsDeclined = response == 4,

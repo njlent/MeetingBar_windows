@@ -3,12 +3,12 @@
         Icon="/Resources/MeetingBar.ico" WindowStyle="None" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" Width="520" Height="260" AllowsTransparency="True" Background="Transparent" WindowStartupLocation="CenterScreen">
   <Border Background="#FA171B26" BorderBrush="#FF6D7CFF" BorderThickness="2" CornerRadius="18" Padding="28">
     <StackPanel VerticalAlignment="Center">
-      <TextBlock Text="MEETING STARTING" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+      <TextBlock Text="{views:Loc 'MEETING STARTING'}" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/>
       <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontSize="26" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" Margin="0,12"/>
       <TextBlock Text="{Binding TimeRange}" Foreground="{StaticResource MutedBrush}" FontSize="14" HorizontalAlignment="Center"/>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
-        <Button Content="Join meeting" Style="{StaticResource AccentButton}" Click="Join_Click" IsEnabled="{Binding CanJoin}"/>
-        <Button Content="Dismiss" Click="Dismiss_Click" Margin="9,0,0,0"/>
+        <Button Content="{views:Loc 'Join meeting'}" Style="{StaticResource AccentButton}" Click="Join_Click" IsEnabled="{Binding CanJoin}"/>
+        <Button Content="{views:Loc 'Dismiss'}" Click="Dismiss_Click" Margin="9,0,0,0"/>
       </StackPanel>
     </StackPanel>
   </Border>

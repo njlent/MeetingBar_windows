@@ -111,6 +111,8 @@ namespace MeetingBar.Windows.Models
         public string PreferredBrowserPath { get; set; } = "";
         public string PreferredBrowserArguments { get; set; } = "";
         public string MapProvider { get; set; } = "Google Maps";
+        // Empty follows the Windows display language; otherwise a tag from Localizer.Languages.
+        public string Language { get; set; } = "";
 
         public bool EnsureCalendarSources()
         {

@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media;
 using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Services;
+using MeetingBar.Windows.Views;
 
 namespace MeetingBar.Windows
 {
@@ -21,6 +22,7 @@ namespace MeetingBar.Windows
             if (!created) { SendCommand(e.Args.Length == 0 ? "popup" : e.Args[0].TrimStart('-')); Shutdown(); return; }
             base.OnStartup(e);
             ApplyWindowsAccent();
+            LanguageSource.Initialize();
             AppDomain.CurrentDomain.UnhandledException += (s, args) => AppLog.Error("Unhandled", args.ExceptionObject as Exception ?? new Exception("Unknown fatal error"));
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, args) => { AppLog.Error("Task", args.Exception); args.SetObserved(); };
             DispatcherUnhandledException += (s, args) =>

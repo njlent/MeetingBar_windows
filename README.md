@@ -62,6 +62,7 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 - Configurable end-of-day taskbar behavior: hide the widget, show a standard or custom message, or continue showing the next event
 - Optional fullscreen-aware taskbar hiding, plus an app list for borderless games populated from running applications or an executable picker
 - Global `Ctrl+Alt+J` join shortcut
+- English, German, Spanish, French, Italian, Dutch, Polish, Brazilian Portuguese, Turkish, Russian, Japanese, Korean, and Simplified and Traditional Chinese. MeetingBar follows the Windows display language; choose a different one under **Settings > General > Language**
 - Local command forwarding for Raycast for Windows, PowerToys Run, scripts, and desktop shortcuts
 - Native WinUI Debug page for local-only injected events, test notifications, and full-screen reminder testing without modifying a real calendar
 
