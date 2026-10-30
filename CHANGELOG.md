@@ -19,6 +19,7 @@
 - Prevented meetings marked as free from sending reminders when free events were ignored in the taskbar.
 - Kept the popup's current meeting synchronized with the taskbar widget when events were ignored or filtered.
 - Fixed timeline meeting-title emojis that rendered as white Unicode glyphs instead of full-color emoji.
+- Fixed Settings text wrapping one letter per line in small or display-scaled windows: the navigation pane now collapses to an icon rail or menu button, setting controls move below their descriptions when space runs out, and the window opens at a DPI-aware size with a minimum size (#22).
 
 ## 0.1.0 - 2026-07-17
 
