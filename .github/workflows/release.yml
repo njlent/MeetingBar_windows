@@ -60,7 +60,8 @@ jobs:
 
           $releaseNotes = $releaseMatch.Groups['notes'].Value.Trim()
           foreach ($heading in @('Added', 'Fixed')) {
-            if ($releaseNotes -notmatch "(?im)^###[ \t]+$heading[ \t]*$") {
+            # Windows runners check out CRLF, and .NET's multiline $ only matches before \n.
+            if ($releaseNotes -notmatch "(?im)^###[ \t]+$heading[ \t]*\r?$") {
               throw "The $version changelog must contain a '$heading' subsection."
             }
           }
