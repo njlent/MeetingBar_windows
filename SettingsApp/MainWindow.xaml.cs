@@ -14,6 +14,8 @@ public sealed partial class MainWindow : Window
 {
     private static readonly string[] TimelineDatePatterns = { "dd.MM.yyyy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "dd MMM yyyy" };
     private static readonly string[] TimelineDateChoices = { "31.12.2026  (dd.MM.yyyy)", "12/31/2026  (MM/dd/yyyy)", "31/12/2026  (dd/MM/yyyy)", "2026-12-31  (yyyy-MM-dd)", "31 Dec 2026  (dd MMM yyyy)" };
+    private const int MinimumWindowWidth = 420, MinimumWindowHeight = 480;
+    private const double NarrowPageWidth = 560, HeaderIconMinimumWidth = 440;
     private readonly DispatcherTimer _stateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Dictionary<string, CheckBox> _calendarChecks = new();
     private readonly Dictionary<string, CalendarSourceEditor> _calendarSourceEditors = new();
@@ -84,15 +86,49 @@ public sealed partial class MainWindow : Window
             appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
             appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
         }
+        // AppWindow sizes are physical pixels, so scale the layout sizes for the display's DPI.
+        var scale = GetDpiForWindow(hwnd) / 96.0;
+        if (scale <= 0) scale = 1;
+        if (appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.PreferredMinimumWidth = (int)Math.Round(MinimumWindowWidth * scale);
+            presenter.PreferredMinimumHeight = (int)Math.Round(MinimumWindowHeight * scale);
+        }
         var display = DisplayArea.GetFromWindowId(id, DisplayAreaFallback.Primary);
         if (display != null)
         {
             var area = display.WorkArea;
-            var width = Math.Min(1080, area.Width - 32);
-            var height = Math.Min(900, area.Height - 32);
+            var width = Math.Min((int)Math.Round(1080 * scale), area.Width - 32);
+            var height = Math.Min((int)Math.Round(900 * scale), area.Height - 32);
             appWindow.Resize(new SizeInt32(width, height));
             appWindow.Move(new PointInt32(area.X + Math.Max(0, (area.Width - width) / 2), area.Y + Math.Max(0, (area.Height - height) / 2)));
         }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    private void Navigation_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args) => UpdateAdaptiveLayout(sender.IsPaneOpen);
+    private void Navigation_PaneOpening(NavigationView sender, object args) => UpdateAdaptiveLayout(true);
+    private void Navigation_PaneClosing(NavigationView sender, NavigationViewPaneClosingEventArgs args) => UpdateAdaptiveLayout(false);
+    private void PageScroller_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateAdaptiveLayout(Navigation.IsPaneOpen);
+
+    private void UpdateAdaptiveLayout(bool paneOpen)
+    {
+        // The brand header only fits the full-width pane; the compact rail shows just the icons.
+        PaneBrand.Visibility = paneOpen ? Visibility.Visible : Visibility.Collapsed;
+        var mode = Navigation.DisplayMode;
+        var narrow = PageScroller.ActualWidth > 0 && PageScroller.ActualWidth < NarrowPageWidth;
+        // In minimal mode the pane toggle button floats over the page, so leave room for it.
+        var top = mode == NavigationViewDisplayMode.Minimal ? 52 : 14;
+        PageHost.Padding = narrow ? new Thickness(16, top, 16, 28) : new Thickness(36, top, 40, 38);
+        var inset = mode switch
+        {
+            NavigationViewDisplayMode.Minimal => 16,
+            NavigationViewDisplayMode.Expanded when paneOpen => Navigation.OpenPaneLength,
+            _ => Navigation.CompactPaneLength
+        };
+        FooterContent.Margin = new Thickness(inset, 0, narrow ? 16 : 38, 0);
     }
 
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -132,6 +168,12 @@ public sealed partial class MainWindow : Window
         Grid.SetColumn(text, 1);
         titleRow.Children.Add(icon);
         titleRow.Children.Add(text);
+        titleRow.SizeChanged += (_, e) =>
+        {
+            var showIcon = e.NewSize.Width >= HeaderIconMinimumWidth;
+            icon.Visibility = showIcon ? Visibility.Visible : Visibility.Collapsed;
+            titleRow.ColumnSpacing = showIcon ? 18 : 0;
+        };
         PagePanel.Children.Add(titleRow);
     }
 
@@ -144,9 +186,7 @@ public sealed partial class MainWindow : Window
     private void AddCard(string title, string description, FrameworkElement? control = null)
     {
         var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"] };
-        var row = new Grid { ColumnSpacing = 24 };
-        row.ColumnDefinitions.Add(new ColumnDefinition());
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var row = new SettingsCardRow();
         var copy = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, MaxWidth = 490 };
         copy.Children.Add(new TextBlock { Text = title, FontSize = 14, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(description))
@@ -155,7 +195,6 @@ public sealed partial class MainWindow : Window
         if (control != null)
         {
             control.VerticalAlignment = VerticalAlignment.Center;
-            Grid.SetColumn(control, 1);
             row.Children.Add(control);
         }
         card.Child = row;
@@ -473,7 +512,7 @@ public sealed partial class MainWindow : Window
         AddCard("Calendar color", "Hex color used by the event, tray icon, widget, and timeline.", _debugColor);
 
         AddSection("Actions");
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var actions = new WrapPanel();
         var inject = new Button { Content = "Inject event", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         inject.Click += DebugInject_Click;
         var notification = new Button { Content = "Test notification" };
@@ -537,11 +576,15 @@ public sealed partial class MainWindow : Window
 
     private void AddBookmarkCard(Bookmark bookmark)
     {
-        var name = TextEntry(bookmark.Name, 180);
-        var url = TextEntry(bookmark.Url, 300);
+        var name = TextEntry(bookmark.Name, 0);
+        var url = TextEntry(bookmark.Url, 0);
         var remove = new Button { Content = "Remove", Tag = bookmark };
         remove.Click += RemoveBookmark_Click;
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var controls = new Grid { ColumnSpacing = 8 };
+        controls.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+        controls.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
+        controls.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(url, 1); Grid.SetColumn(remove, 2);
         controls.Children.Add(name); controls.Children.Add(url); controls.Children.Add(remove);
         AddWideCard("Meeting bookmark", "Name and join URL", controls);
         _bookmarkEditors.Add((name, url));
@@ -568,7 +611,7 @@ public sealed partial class MainWindow : Window
     {
         AddHeader("Calendars", "Combine multiple providers and accounts, then choose which calendars are visible.", "\uE787");
         AddSection("Calendar sources");
-        var addButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var addButtons = new WrapPanel();
         var addOutlook = new Button { Content = "Add Outlook", IsEnabled = !_settings.CalendarSources.Any(x => x.Provider == CalendarProviderKind.Outlook) };
         addOutlook.Click += AddOutlookSource_Click;
         var addIcs = new Button { Content = "Add ICS" }; addIcs.Click += AddIcsSource_Click;
@@ -614,19 +657,19 @@ public sealed partial class MainWindow : Window
         var body = new StackPanel { Spacing = 10 };
         var title = source.Provider switch { CalendarProviderKind.Ics => "ICS files or feeds", CalendarProviderKind.Google => "Google Calendar", _ => "Classic Outlook" };
         body.Children.Add(new TextBlock { Text = title, FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        var name = new TextBox { Text = source.Name, Header = "Display name", MinWidth = 320 };
+        var name = new TextBox { Text = source.Name, Header = "Display name" };
         var enabled = new ToggleSwitch { IsOn = source.Enabled, Header = "Include this source", OnContent = "On", OffContent = "Off" };
         body.Children.Add(name); body.Children.Add(enabled);
         TextBox? icsSources = null;
         if (source.Provider == CalendarProviderKind.Ics)
         {
-            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files, HTTPS URLs, and webcal:// links (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 420, Height = 90 };
+            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files, HTTPS URLs, and webcal:// links (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 90 };
             body.Children.Add(icsSources);
         }
         if (source.Provider == CalendarProviderKind.Google)
         {
             body.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Not connected" : "Account: " + source.GoogleAccountEmail, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
-            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            var buttons = new WrapPanel();
             var connect = new Button { Content = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Connect account" : "Reconnect / change account", Tag = source.Id, Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
             connect.Click += ConnectGoogle_Click;
             var disconnect = new Button { Content = "Disconnect", Tag = source.Id, IsEnabled = !string.IsNullOrWhiteSpace(source.GoogleRefreshTokenProtected) };
@@ -661,7 +704,7 @@ public sealed partial class MainWindow : Window
                 Children =
                 {
                     new TextBlock { Text = "Google OAuth client", FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
-                    new TextBlock { Text = "One client configuration for every Google account · read-only access", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") }
+                    new TextBlock { Text = "One client configuration for every Google account · read-only access", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush"), TextWrapping = TextWrapping.Wrap }
                 }
             }
         };

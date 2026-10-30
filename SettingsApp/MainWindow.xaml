@@ -14,11 +14,13 @@
       <TextBlock Text="Settings" VerticalAlignment="Center" FontSize="12"/>
     </Grid>
 
-    <NavigationView x:Name="Navigation" Grid.Row="1" IsPaneOpen="True" PaneDisplayMode="Left" OpenPaneLength="300"
-                    IsPaneToggleButtonVisible="False" IsBackButtonVisible="Collapsed" IsSettingsVisible="False"
-                    AlwaysShowHeader="False" SelectionChanged="Navigation_SelectionChanged" Background="Transparent">
+    <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Auto" OpenPaneLength="300"
+                    ExpandedModeThresholdWidth="900" CompactModeThresholdWidth="560"
+                    IsPaneToggleButtonVisible="True" IsBackButtonVisible="Collapsed" IsSettingsVisible="False"
+                    AlwaysShowHeader="False" SelectionChanged="Navigation_SelectionChanged" Background="Transparent"
+                    DisplayModeChanged="Navigation_DisplayModeChanged" PaneOpening="Navigation_PaneOpening" PaneClosing="Navigation_PaneClosing">
       <NavigationView.PaneHeader>
-        <StackPanel Width="252" Margin="4,4,0,16">
+        <StackPanel x:Name="PaneBrand" Width="252" Margin="4,4,0,16">
           <Grid Margin="0,4,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource AccentFillColorDefaultBrush}">
@@ -41,8 +43,8 @@
         <NavigationViewItem Content="Debug" Tag="Debug" x:Name="DebugItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;"/></NavigationViewItem.Icon></NavigationViewItem>
       </NavigationView.MenuItems>
       <NavigationView.Content>
-        <ScrollViewer x:Name="PageScroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-          <Grid Padding="36,14,40,38" HorizontalAlignment="Stretch">
+        <ScrollViewer x:Name="PageScroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" SizeChanged="PageScroller_SizeChanged">
+          <Grid x:Name="PageHost" Padding="36,14,40,38" HorizontalAlignment="Stretch">
             <StackPanel x:Name="PagePanel" MaxWidth="820" HorizontalAlignment="Stretch"/>
           </Grid>
         </ScrollViewer>
@@ -50,7 +52,7 @@
     </NavigationView>
 
     <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
-      <Grid Margin="300,0,38,0">
+      <Grid x:Name="FooterContent" Margin="300,0,38,0">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <InfoBar x:Name="SaveStatus" IsOpen="False" IsClosable="False" Severity="Success" Message="Settings saved and reloaded" VerticalAlignment="Center" Margin="0,7,18,7"/>
         <Button Grid.Column="1" x:Name="SaveButton" Content="Save" Style="{StaticResource AccentButtonStyle}" MinWidth="92" VerticalAlignment="Center" Click="SaveButton_Click"/>
