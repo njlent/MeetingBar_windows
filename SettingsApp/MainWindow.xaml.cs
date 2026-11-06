@@ -742,7 +742,7 @@ public sealed partial class MainWindow : Window
         body.Children.Add(new TextBlock { Text = T("MeetingBar never sees your Google password. Google asks for read-only calendar access in your browser."), TextWrapping = TextWrapping.Wrap, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
         body.Children.Add(GoogleStep("1", T("Create or select a Google Cloud project"), T("Open Google Cloud projects"), "https://console.cloud.google.com/projectselector2/home/dashboard"));
         body.Children.Add(GoogleStep("2", T("Enable the Google Calendar API in that same project"), T("Open Calendar API page"), "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"));
-        body.Children.Add(GoogleStep("3", T("Configure OAuth consent, add yourself as a test user if needed, and grant calendar.readonly under Data Access"), T("Open OAuth consent"), "https://console.cloud.google.com/auth/overview"));
+        body.Children.Add(GoogleStep("3", T("Configure OAuth consent and grant calendar.readonly under Data Access. Then click Publish app under Audience: apps left in Testing lose their Google sign-in after 7 days."), T("Open OAuth consent"), "https://console.cloud.google.com/auth/overview"));
         body.Children.Add(new TextBox { Text = "https://www.googleapis.com/auth/calendar.readonly", IsReadOnly = true, Header = T("Required Google scope") });
         body.Children.Add(GoogleStep("4", T("Create an OAuth client of type Desktop app. No redirect URL is needed."), T("Open OAuth clients"), "https://console.cloud.google.com/auth/clients"));
         _googleClientId = new TextBox { Text = _settings.GoogleClientId, Header = T("Desktop app client ID"), PlaceholderText = "…apps.googleusercontent.com" };
