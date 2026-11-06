@@ -18,7 +18,12 @@ namespace MeetingBar.Windows.Services
                 lock (Gate)
                 {
                     Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PathValue));
-                    if (File.Exists(PathValue) && new FileInfo(PathValue).Length > 1024 * 1024) File.Move(PathValue, PathValue + ".old");
+                    if (File.Exists(PathValue) && new FileInfo(PathValue).Length > 1024 * 1024)
+                    {
+                        // File.Move refuses to overwrite, so without this the second rotation failed and logging stopped for good.
+                        File.Delete(PathValue + ".old");
+                        File.Move(PathValue, PathValue + ".old");
+                    }
                     File.AppendAllText(PathValue, DateTimeOffset.Now.ToString("o") + " " + level + " " + message.Replace("\r", " ").Replace("\n", " ") + Environment.NewLine, Encoding.UTF8);
                 }
             }

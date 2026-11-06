@@ -123,11 +123,24 @@ namespace MeetingBar.Windows.Services
             var response = await _http.PostAsync(url, new FormUrlEncodedContent(form)); var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                string description = null;
-                try { description = Value(_json.Deserialize<Dictionary<string, object>>(body), "error_description"); } catch { }
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(description) ? T("Google OAuth error.") : T("Google OAuth error: {0}", description));
+                string grantType;
+                throw OAuthError(body, form.TryGetValue("grant_type", out grantType) && grantType == "refresh_token");
             }
             return _json.Deserialize<Dictionary<string, object>>(body);
+        }
+        internal static Exception OAuthError(string body, bool refreshing)
+        {
+            string error = null, description = null;
+            try
+            {
+                var root = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(body);
+                error = Value(root, "error"); description = Value(root, "error_description");
+            }
+            catch { }
+            // invalid_grant on a refresh means Google no longer honors the stored refresh token (expired, revoked, or
+            // superseded). Retrying cannot recover; only a new browser sign-in can.
+            if (refreshing && error == "invalid_grant") return new GoogleReauthRequiredException(T("Google sign-in expired. Reconnect this account in Settings → Calendars. If this happens every 7 days, the OAuth app is still in Testing: publish it under Google Auth Platform → Audience, then reconnect once."));
+            return new InvalidOperationException(string.IsNullOrWhiteSpace(description) ? T("Google OAuth error.") : T("Google OAuth error: {0}", description));
         }
         private async Task<Dictionary<string, object>> GetJson(string url, string token)
         {
@@ -196,5 +209,10 @@ namespace MeetingBar.Windows.Services
         private static string Base64Url(byte[] data) => Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         private static string Protect(string value) => Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser));
         private static string Unprotect(string value) => Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(value), null, DataProtectionScope.CurrentUser));
+    }
+
+    public sealed class GoogleReauthRequiredException : InvalidOperationException
+    {
+        public GoogleReauthRequiredException(string message) : base(message) { }
     }
 }

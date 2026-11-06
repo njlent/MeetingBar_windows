@@ -36,7 +36,7 @@ First launch adds Classic Outlook as the initial source. Right-click the tray ic
 
 - **Outlook** reads local Classic Outlook calendars through its local COM interface. New Outlook does not expose that interface.
 - **ICS** sources accept one local `.ics` path, HTTP(S) calendar feed URL, or `webcal://`/`webcals://` subscription link per line. Webcal links are fetched over HTTPS. Add multiple ICS source cards when separate naming, visibility, or enable/disable controls are useful.
-- **Google** uses direct Calendar API access. Follow the four-step guide in Settings. Besides enabling Google Calendar API, the OAuth consent configuration must include `https://www.googleapis.com/auth/calendar.readonly` under **Data Access**. Create one OAuth client of type **Desktop app** and enter its client ID once, then add and connect each Google account separately. Every connection uses the same OAuth client and asks which Google account to add; each account receives its own refresh token, encrypted with Windows Data Protection for the signed-in Windows user. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`.
+- **Google** uses direct Calendar API access. Follow the four-step guide in Settings. Besides enabling Google Calendar API, the OAuth consent configuration must include `https://www.googleapis.com/auth/calendar.readonly` under **Data Access**, and the app must be published under **Audience** (**Publish app**). Google expires sign-ins for apps left in **Testing** after 7 days. A personal, unverified app works: Google shows an "unverified app" warning during sign-in, which you can continue past. Create one OAuth client of type **Desktop app** and enter its client ID once, then add and connect each Google account separately. Every connection uses the same OAuth client and asks which Google account to add; each account receives its own refresh token, encrypted with Windows Data Protection for the signed-in Windows user. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`.
 
 Each source has its own visible-calendar selection. If one source fails to refresh, MeetingBar keeps that source's last-known-good events while continuing to update healthy sources. Existing single-provider settings are migrated automatically on first launch.
 
@@ -110,6 +110,8 @@ Source structure follows feature ownership: calendar providers and sync, meeting
 Provider refresh results and crash information are written without event titles or URLs to `%APPDATA%\MeetingBar\meetingbar.log`.
 
 If Google reports missing Calendar permission, open **Settings → Calendars**, complete step 3 under **Data Access**, click **Disconnect**, then connect again so Google issues a token with the required scope.
+
+If a Google account keeps losing its sign-in after 7 days, the OAuth app is still in **Testing**. Open **Google Auth Platform → Audience**, click **Publish app**, then reconnect the account once. MeetingBar shows a notification when a Google sign-in expires; click it to sign in again.
 
 ## License
 

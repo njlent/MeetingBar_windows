@@ -10,6 +10,9 @@
 
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
+- Fixed expired Google sign-ins going unnoticed: a notification now names the account and reconnects it when clicked, repeating every two hours until fixed. The error message explains Google's 7-day limit for OAuth apps in Testing, and the Google setup guide says to publish the app instead of adding test users.
+- Fixed log rotation, which stopped all logging once `meetingbar.log.old` existed.
+
 ## 0.1.2 - 2026-10-30
 
 ### Added
