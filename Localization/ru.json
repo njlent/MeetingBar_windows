@@ -340,5 +340,13 @@
   "Dismiss": "Закрыть",
   "Calendar is clear": "Календарь свободен",
   "No events today": "Сегодня нет событий",
-  "Join": "Присоединиться"
+  "Join": "Присоединиться",
+  "Monitor": "Монитор",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Выберите экран, на панели задач которого отображается мини-приложение. Пока этот экран отключен, мини-приложение использует основной экран.",
+  "Primary display (automatic)": "Основной экран (автоматически)",
+  "Display {0}": "Экран {0}",
+  "Display {0} (not connected)": "Экран {0} (не подключен)",
+  "Primary": "Основной",
+  "All-day events in the taskbar": "События на весь день на панели задач",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Показывать событие на весь день, например праздник, на панели задач, если на сегодня не осталось встреч с указанным временем. Встречи с указанным временем всегда имеют приоритет."
 }

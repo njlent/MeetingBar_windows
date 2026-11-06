@@ -340,5 +340,13 @@
   "Dismiss": "閉じる",
   "Calendar is clear": "予定はありません",
   "No events today": "今日の予定はありません",
-  "Join": "参加"
+  "Join": "参加",
+  "Monitor": "モニター",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "ウィジェットを表示するタスク バーのディスプレイを選択します。そのディスプレイが切断されている間は、メイン ディスプレイを使用します。",
+  "Primary display (automatic)": "メイン ディスプレイ (自動)",
+  "Display {0}": "ディスプレイ {0}",
+  "Display {0} (not connected)": "ディスプレイ {0} (未接続)",
+  "Primary": "メイン",
+  "All-day events in the taskbar": "タスク バーの終日の予定",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "今日の時刻指定の会議が残っていないとき、祝日などの終日の予定をタスク バーに表示します。時刻指定の会議が常に優先されます。"
 }

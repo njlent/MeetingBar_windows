@@ -43,6 +43,8 @@ namespace MeetingBar.Windows.Models
     public sealed class AppSettings
     {
         public WidgetMode WidgetMode { get; set; } = WidgetMode.NearTray;
+        // Windows display device name (DISPLAY1, DISPLAY2, ...). Empty follows the primary display.
+        public string WidgetMonitorDevice { get; set; } = "";
         public double WidgetWidth { get; set; } = 500;
         public double WidgetOffsetX { get; set; }
         public double WidgetOffsetY { get; set; }
@@ -65,6 +67,7 @@ namespace MeetingBar.Windows.Models
         public bool HighlightWholeMeeting { get; set; }
         public WidgetHighlightStyle WidgetHighlightStyle { get; set; } = WidgetHighlightStyle.Shine;
         public bool ShowAllDayEvents { get; set; } = true;
+        public bool ShowAllDayEventsInWidget { get; set; } = true;
         public bool ShowDeclinedEvents { get; set; }
         public bool ShowTentativeEvents { get; set; } = true;
         public bool ShowFreeEvents { get; set; } = true;

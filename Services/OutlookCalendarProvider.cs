@@ -11,6 +11,8 @@ namespace MeetingBar.Windows.Services
 {
     public sealed class OutlookCalendarProvider
     {
+        private const int MaximumAppointmentsPerFolder = 5000;
+
         public Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(DateTime from, DateTime to)
         {
             return Task.Run(() => Fetch(from, to));
@@ -20,6 +22,7 @@ namespace MeetingBar.Windows.Services
         {
             var calendars = new List<CalendarInfo>();
             var events = new List<CalendarEvent>();
+            var read = new ReadOutcome();
             var outlookType = Type.GetTypeFromProgID("Outlook.Application");
             if (outlookType == null) throw new InvalidOperationException(T("Classic Outlook desktop is not installed. Choose ICS or Google Calendar in Settings."));
             object app = null, session = null, stores = null;
@@ -36,21 +39,28 @@ namespace MeetingBar.Windows.Services
                     {
                         store = GetIndexed(stores, s);
                         root = Invoke(store, "GetRootFolder");
-                        ReadFolderTree(root, from, to, calendars, events);
+                        ReadFolderTree(root, from, to, calendars, events, read);
                     }
-                    catch { }
+                    catch (Exception error) { read.Fail(error); }
                     finally { Release(root); Release(store); }
                 }
             }
             finally { Release(stores); Release(session); Release(app); }
+            // Outlook rejects calls while it is busy, and stores can be offline. When no calendar could be
+            // read, fail the refresh so the sync service keeps the previous events instead of clearing them.
+            if (read.Succeeded == 0 && read.FirstError != null) throw new InvalidOperationException(read.FirstError.Message, read.FirstError);
             return Tuple.Create(calendars.GroupBy(x => x.Id).Select(x => x.First()).ToList(), events.OrderBy(x => x.Start).ToList());
         }
 
-        private void ReadFolderTree(object folder, DateTime from, DateTime to, List<CalendarInfo> calendars, List<CalendarEvent> output)
+        private void ReadFolderTree(object folder, DateTime from, DateTime to, List<CalendarInfo> calendars, List<CalendarEvent> output, ReadOutcome read)
         {
             if (folder == null) return;
             var defaultItemType = SafeInt(() => Get(folder, "DefaultItemType"), -1);
-            if (defaultItemType == 1) ReadCalendarFolder(folder, from, to, calendars, output); // olAppointmentItem
+            if (defaultItemType == 1) // olAppointmentItem
+            {
+                try { ReadCalendarFolder(folder, from, to, calendars, output); read.Succeeded++; }
+                catch (Exception error) { read.Fail(error); }
+            }
             object folders = null;
             try
             {
@@ -59,8 +69,8 @@ namespace MeetingBar.Windows.Services
                 for (var i = 1; i <= count; i++)
                 {
                     object child = null;
-                    try { child = GetIndexed(folders, i); ReadFolderTree(child, from, to, calendars, output); }
-                    catch { }
+                    try { child = GetIndexed(folders, i); ReadFolderTree(child, from, to, calendars, output, read); }
+                    catch (Exception error) { read.Fail(error); }
                     finally { Release(child); }
                 }
             }
@@ -73,21 +83,22 @@ namespace MeetingBar.Windows.Services
             var name = SafeString(() => Get(folder, "Name")) ?? "Outlook Calendar";
             var color = ColorFor(id);
             calendars.Add(new CalendarInfo { Id = id, Name = name, Source = "Outlook", Color = color });
-            object items = null, restricted = null;
+            object items = null, restricted = null, item = null;
             try
             {
                 items = Get(folder, "Items");
-                Set(items, "IncludeRecurrences", true);
+                // Outlook expands recurring appointments only in this order: sort by start,
+                // set IncludeRecurrences, then restrict.
                 Invoke(items, "Sort", "[Start]");
+                Set(items, "IncludeRecurrences", true);
                 var filter = "[Start] < '" + to.ToString("g", CultureInfo.CurrentCulture) + "' AND [End] > '" + from.ToString("g", CultureInfo.CurrentCulture) + "'";
                 restricted = Invoke(items, "Restrict", filter);
-                var count = Math.Min(SafeInt(() => Get(restricted, "Count"), 0), 5000);
-                for (var i = 1; i <= count; i++)
+                // Count is meaningless once recurrences are included, so walk the collection instead.
+                item = Invoke(restricted, "GetFirst");
+                for (var read = 0; item != null && read < MaximumAppointmentsPerFolder; read++, item = Invoke(restricted, "GetNext"))
                 {
-                    object item = null;
                     try
                     {
-                        item = GetIndexed(restricted, i);
                         var start = SafeDate(() => Get(item, "Start"));
                         var end = SafeDate(() => Get(item, "End"));
                         if (start == DateTime.MinValue || end <= from || start >= to) continue;
@@ -98,7 +109,7 @@ namespace MeetingBar.Windows.Services
                         var itemUrl = TryGetOnlineMeetingUrl(item);
                         output.Add(new CalendarEvent
                         {
-                            Id = SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"),
+                            Id = OccurrenceId(SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"), start),
                             Title = SafeString(() => Get(item, "Subject")) ?? T("Untitled event"), Notes = body, Location = location,
                             ConferenceUrl = itemUrl, CalendarId = id, CalendarName = name, CalendarColor = color,
                             Organizer = SafeString(() => Get(item, "Organizer")), Start = start, End = end,
@@ -108,10 +119,44 @@ namespace MeetingBar.Windows.Services
                         });
                     }
                     catch { }
-                    finally { Release(item); }
+                    finally { Release(item); item = null; }
                 }
             }
-            finally { Release(restricted); Release(items); }
+            finally { Release(item); Release(restricted); Release(items); }
+        }
+
+        // All occurrences of a recurring series share one GlobalAppointmentID. Adding the start time
+        // keeps dismissals and sent reminders scoped to a single occurrence.
+        internal static string OccurrenceId(string seriesId, DateTime start) => seriesId + ":" + start.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture);
+
+        /// <summary>Shows a calendar folder in Classic Outlook, the app this provider reads from.</summary>
+        /// <remarks>The outlookcal: protocol can open New Outlook, which does not show Classic Outlook data.</remarks>
+        public static void OpenCalendarFolder(string calendarId)
+        {
+            var outlookType = Type.GetTypeFromProgID("Outlook.Application");
+            if (outlookType == null) throw new InvalidOperationException(T("Classic Outlook desktop is not installed. Choose ICS or Google Calendar in Settings."));
+            object app = null, session = null, folder = null, explorer = null;
+            try
+            {
+                app = Activator.CreateInstance(outlookType);
+                session = Invoke(app, "GetNamespace", "MAPI");
+                if (!string.IsNullOrWhiteSpace(calendarId))
+                    try { folder = Invoke(session, "GetFolderFromID", calendarId); } catch { folder = null; }
+                if (folder == null) folder = Invoke(session, "GetDefaultFolder", 9); // olFolderCalendar
+                explorer = Invoke(app, "ActiveExplorer");
+                if (explorer == null) { Invoke(folder, "Display"); return; }
+                Set(explorer, "CurrentFolder", folder);
+                if (SafeInt(() => Get(explorer, "WindowState"), 0) == 1) Set(explorer, "WindowState", 2); // olMinimized -> olNormalWindow
+                Invoke(explorer, "Activate");
+            }
+            finally { Release(explorer); Release(folder); Release(session); Release(app); }
+        }
+
+        private sealed class ReadOutcome
+        {
+            public int Succeeded;
+            public Exception FirstError { get; private set; }
+            public void Fail(Exception error) { if (FirstError == null) FirstError = error; }
         }
 
         private static string TryGetOnlineMeetingUrl(object item)

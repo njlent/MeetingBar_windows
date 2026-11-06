@@ -142,7 +142,7 @@ namespace MeetingBar.Windows.Services
         private void EnsureWidgetVisible()
         {
             if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget
-                || FullscreenWidgetVisibilityService.ShouldHide(_settings.Current))
+                || FullscreenWidgetVisibilityService.ShouldHide(_settings.Current, WidgetMonitor()))
             {
                 _widget?.Hide();
                 return;
@@ -173,16 +173,39 @@ namespace MeetingBar.Windows.Services
             PositionPopup(_popup); _popup.ShowAnimated();
         }
 
+        private MeetingBar.Display.ConnectedMonitor WidgetMonitor() =>
+            MeetingBar.Display.MonitorCatalog.Resolve(MeetingBar.Display.MonitorCatalog.GetAll(), _settings.Current.WidgetMonitorDevice);
+
         private void PositionPopup(Window popup)
         {
             popup.UpdateLayout();
-            var work = SystemParameters.WorkArea;
-            if (_widget?.IsVisible == true)
+            var handle = new WindowInteropHelper(popup).EnsureHandle();
+            var monitor = WidgetMonitor();
+            if (monitor == null) return;
+            var widgetHandle = _widget?.IsVisible == true ? new WindowInteropHelper(_widget).Handle : IntPtr.Zero;
+            var anchored = NativeMethods.GetWindowRect(widgetHandle, out var widget);
+            // Place in physical pixels on the widget's display. Moving to a display with another scale makes WPF
+            // resize the popup, so a second pass places it again with its final size.
+            for (var pass = 0; pass < 2; pass++)
             {
-                popup.Left = Math.Max(work.Left + 8, Math.Min(work.Right - popup.Width - 8, _widget.Left + _widget.Width - popup.Width));
-                popup.Top = Math.Max(work.Top + 12, _widget.Top - popup.Height - 12);
+                if (!NativeMethods.GetWindowRect(handle, out var current)) return;
+                var width = current.Right - current.Left;
+                var height = current.Bottom - current.Top;
+                var scale = monitor.Scale;
+                int left, top;
+                if (anchored)
+                {
+                    left = (int)Math.Max(monitor.WorkLeft + 8 * scale, Math.Min(monitor.WorkRight - width - 8 * scale, widget.Right - width));
+                    top = (int)Math.Max(monitor.WorkTop + 12 * scale, widget.Top - height - 12 * scale);
+                }
+                else
+                {
+                    left = (int)(monitor.WorkRight - width - 10 * scale);
+                    top = (int)(monitor.WorkBottom - height - 10 * scale);
+                }
+                if (left == current.Left && top == current.Top) return;
+                NativeMethods.SetWindowPos(handle, IntPtr.Zero, left, top, 0, 0, NativeMethods.SwpNoSize | NativeMethods.SwpNoZOrder | NativeMethods.SwpNoActivate);
             }
-            else { popup.Left = work.Right - popup.Width - 10; popup.Top = work.Bottom - popup.Height - 10; }
         }
 
         private void OpenSettings()

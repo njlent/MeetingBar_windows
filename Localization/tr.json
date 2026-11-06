@@ -340,5 +340,13 @@
   "Dismiss": "Kapat",
   "Calendar is clear": "Takvim boş",
   "No events today": "Bugün etkinlik yok",
-  "Join": "Katıl"
+  "Join": "Katıl",
+  "Monitor": "Monitör",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Pencere öğesinin hangi ekranın görev çubuğunda görüneceğini seçin. Bu ekranın bağlantısı kesikken pencere öğesi birincil ekranı kullanır.",
+  "Primary display (automatic)": "Birincil ekran (otomatik)",
+  "Display {0}": "Ekran {0}",
+  "Display {0} (not connected)": "Ekran {0} (bağlı değil)",
+  "Primary": "Birincil",
+  "All-day events in the taskbar": "Görev çubuğunda tüm gün süren etkinlikler",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Bugün saati belirli bir toplantı kalmadığında, tatil gibi tüm gün süren bir etkinliği görev çubuğunda gösterir. Saati belirli toplantılar her zaman önceliklidir."
 }

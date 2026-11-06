@@ -50,12 +50,29 @@ namespace MeetingBar.Windows.Services
         public static CalendarEvent NextTaskbarEvent(IEnumerable<CalendarEvent> events, bool ignoreFreeEvents, DateTime now) =>
             (events ?? Enumerable.Empty<CalendarEvent>()).FirstOrDefault(item => item.End > now && !item.IsDismissed && (!ignoreFreeEvents || item.IsBusy));
 
+        /// <summary>Days searched for the next meeting, independent of the days shown in the popup.</summary>
+        public const int UpcomingSearchDays = 30;
+
+        /// <summary>
+        /// Picks the event for the taskbar and tray. Timed meetings outrank all-day events such as holidays
+        /// or out-of-office blocks, which would otherwise hold the taskbar for the whole day. An all-day
+        /// event is shown only while no timed meeting is left today.
+        /// </summary>
+        public static CalendarEvent NextPrioritizedEvent(IEnumerable<CalendarEvent> events, AppSettings settings, DateTime now)
+        {
+            var list = (events ?? Enumerable.Empty<CalendarEvent>()).ToList();
+            var ignoreFree = settings?.IgnoreFreeEventsInTaskbar == true;
+            var timed = NextTaskbarEvent(list.Where(item => !item.IsAllDay), ignoreFree, now);
+            if (settings != null && (!settings.ShowAllDayEvents || !settings.ShowAllDayEventsInWidget)) return timed;
+            if (timed != null && timed.Start < now.Date.AddDays(1)) return timed;
+            var allDay = NextTaskbarEvent(list.Where(item => item.IsAllDay), ignoreFree, now);
+            if (allDay != null && allDay.Start <= now) return allDay;
+            return timed ?? allDay;
+        }
+
         public static CalendarEvent NextWidgetEvent(IEnumerable<CalendarEvent> events, AppSettings settings, DateTime now)
         {
-            var candidates = settings?.ShowAllDayEvents == false
-                ? (events ?? Enumerable.Empty<CalendarEvent>()).Where(item => !item.IsAllDay)
-                : events;
-            var next = NextTaskbarEvent(candidates, settings?.IgnoreFreeEventsInTaskbar == true, now);
+            var next = NextPrioritizedEvent(events, settings, now);
             if (next == null || settings == null || settings.EndOfDayWidgetBehavior == EndOfDayWidgetBehavior.NextEvent) return next;
             return next.Start.Date == now.Date || next.Start <= now ? next : null;
         }

@@ -340,5 +340,13 @@
   "Dismiss": "Dismiss",
   "Calendar is clear": "Calendar is clear",
   "No events today": "No events today",
-  "Join": "Join"
+  "Join": "Join",
+  "Monitor": "Monitor",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.",
+  "Primary display (automatic)": "Primary display (automatic)",
+  "Display {0}": "Display {0}",
+  "Display {0} (not connected)": "Display {0} (not connected)",
+  "Primary": "Primary",
+  "All-day events in the taskbar": "All-day events in the taskbar",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first."
 }

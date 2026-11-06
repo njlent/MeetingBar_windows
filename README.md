@@ -61,6 +61,8 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 - Configurable taskbar highlight before and during meetings, using the native hover surface or an animated in-progress shine
 - Configurable end-of-day taskbar behavior: hide the widget, show a standard or custom message, or continue showing the next event
 - Optional fullscreen-aware taskbar hiding, plus an app list for borderless games populated from running applications or an executable picker
+- Monitor choice for the taskbar widget on multi-display setups, with fallback to the primary display while the chosen one is disconnected
+- Timed meetings take priority over all-day events in the taskbar, and the next meeting is found up to 30 days ahead regardless of the days shown in the popup
 - Global `Ctrl+Alt+J` join shortcut
 - English, German, Spanish, French, Italian, Dutch, Polish, Brazilian Portuguese, Turkish, Russian, Japanese, Korean, and Simplified and Traditional Chinese. MeetingBar follows the Windows display language; choose a different one under **Settings > General > Language**
 - Local command forwarding for Raycast for Windows, PowerToys Run, scripts, and desktop shortcuts
@@ -98,7 +100,7 @@ Source structure follows feature ownership: calendar providers and sync, meeting
 
 ## Known platform limits
 
-- The taskbar overlay targets the primary Windows taskbar. Multi-monitor secondary taskbar selection is not implemented yet.
+- Secondary taskbars have no separately exposed notification area, so in right-side mode the widget keeps a fixed distance from their right edge. Adjust the horizontal offset if it overlaps the clock.
 - Outlook support requires Classic Outlook. Google and ICS work without Outlook.
 - Notification balloons use the built-in notification-area API; full-screen reminders provide the richer join action.
 - The portable Win+W provider is a loose unsigned app package. Windows Developer Mode must be enabled before its settings toggle can register it, and Windows requires manual pinning from the Win+W picker.

@@ -340,5 +340,13 @@
   "Dismiss": "忽略",
   "Calendar is clear": "行事曆上目前沒有安排",
   "No events today": "今天沒有活動",
-  "Join": "加入"
+  "Join": "加入",
+  "Monitor": "螢幕",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "選擇要在哪個螢幕的工作列上顯示小工具。該螢幕中斷連線期間，小工具會使用主螢幕。",
+  "Primary display (automatic)": "主螢幕（自動）",
+  "Display {0}": "螢幕 {0}",
+  "Display {0} (not connected)": "螢幕 {0}（未連線）",
+  "Primary": "主螢幕",
+  "All-day events in the taskbar": "工作列中的全天活動",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "當今天沒有剩餘的定時會議時，在工作列中顯示假日等全天活動。定時會議一律優先。"
 }
