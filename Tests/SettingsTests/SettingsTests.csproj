@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests the WinUI Settings app's settings storage, which needs .NET 8 rather than the .NET Framework test runner. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>MeetingBar.SettingsTests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\SettingsApp\SettingsModels.cs" Link="SettingsModels.cs" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MeetingBar.SettingsApp;
 
@@ -47,6 +48,8 @@ public sealed class Bookmark
 public sealed class AppSettings
 {
     public WidgetMode WidgetMode { get; set; } = WidgetMode.NearTray;
+    // Windows display device name (DISPLAY1, DISPLAY2, ...). Empty follows the primary display.
+    public string WidgetMonitorDevice { get; set; } = "";
     public double WidgetWidth { get; set; } = 500;
     public double WidgetOffsetX { get; set; }
     public double WidgetOffsetY { get; set; }
@@ -69,6 +72,7 @@ public sealed class AppSettings
     public bool HighlightWholeMeeting { get; set; }
     public WidgetHighlightStyle WidgetHighlightStyle { get; set; } = WidgetHighlightStyle.Shine;
     public bool ShowAllDayEvents { get; set; } = true;
+    public bool ShowAllDayEventsInWidget { get; set; } = true;
     public bool ShowDeclinedEvents { get; set; }
     public bool ShowTentativeEvents { get; set; } = true;
     public bool ShowFreeEvents { get; set; } = true;
@@ -182,6 +186,8 @@ public sealed class DebugRequest
 
 public static class SettingsStore
 {
+    // The settings as last loaded or saved by this window; Save writes only what differs from it.
+    private static string? _baseline;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -202,6 +208,7 @@ public static class SettingsStore
                 : JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
             settings.EnsureCalendarSources();
             settings.FullscreenAppBlacklist ??= [];
+            _baseline = JsonSerializer.Serialize(settings, JsonOptions);
             return settings;
         }
         catch (Exception error)
@@ -224,9 +231,39 @@ public static class SettingsStore
     public static void Save(AppSettings settings)
     {
         Directory.CreateDirectory(FolderPath);
+        var edited = JsonSerializer.Serialize(settings, JsonOptions);
+        string? current = null;
+        try { if (File.Exists(SettingsPath)) current = File.ReadAllText(SettingsPath, Encoding.UTF8); }
+        catch (IOException) { }
         var temporary = SettingsPath + ".winui.tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions), new UTF8Encoding(false));
+        File.WriteAllText(temporary, MergeChanges(_baseline, edited, current), new UTF8Encoding(false));
         File.Move(temporary, SettingsPath, true);
+        _baseline = edited;
+    }
+
+    /// <summary>
+    /// Applies only the settings changed in this window since they were loaded on top of the file on disk.
+    /// MeetingBar writes the same file while Settings is open, for example when an event is dismissed, and a
+    /// full overwrite would bring those values back.
+    /// </summary>
+    internal static string MergeChanges(string? baseline, string edited, string? current)
+    {
+        var before = ParseObject(baseline);
+        var result = ParseObject(current);
+        var changes = ParseObject(edited);
+        if (before == null || result == null || changes == null) return edited;
+        foreach (var property in changes)
+        {
+            if (!JsonNode.DeepEquals(before[property.Key], property.Value)) result[property.Key] = property.Value?.DeepClone();
+        }
+        return result.ToJsonString(JsonOptions);
+    }
+
+    private static JsonObject? ParseObject(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonNode.Parse(json) as JsonObject; }
+        catch (JsonException) { return null; }
     }
 
     public static void SaveDebugRequest(DebugRequest request)
