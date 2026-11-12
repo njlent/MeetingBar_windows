@@ -6,13 +6,19 @@
 
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
+### Fixed
+
+<!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
+
+## 0.1.3 - 2026-11-12
+
+### Added
+
 - Added a Settings > Widget > Monitor choice for the display whose taskbar shows the widget. The popup opens on that display, fullscreen hiding only reacts to apps on it, and the widget falls back to the primary display while the chosen one is disconnected.
 - Added a Settings > Events toggle for all-day events in the taskbar.
 - Added an expired Google sign-in alert that shows like an active event: the taskbar widget reads "Google Calendar sign-in expired" with a red marker, and the popup's top card names the account and offers Sign in again.
 
 ### Fixed
-
-<!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
 - Fixed all-day events such as holidays holding the taskbar widget and tray for the whole day; timed meetings now come first, and an all-day event shows only when no timed meeting is left today.
 - Fixed the taskbar widget showing no next meeting when it fell outside the days shown in the popup, for example after a weekend; the next meeting is now searched 30 days ahead.
