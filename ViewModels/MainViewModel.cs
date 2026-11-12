@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -27,7 +28,14 @@ namespace MeetingBar.Windows.ViewModels
         public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
         public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(Events, _settings.Current, DateTime.Now);
         public CalendarEvent NextEvent => WidgetEvent;
-        public bool ShouldShowTaskbarWidget => _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
+        // An expired Google sign-in silently stops new meetings, so the widget and popup show it like an active event.
+        public bool IsSignInExpired => _sync.SourcesNeedingReauth.Count > 0;
+        private string ExpiredAccounts => string.Join(", ", _sync.SourcesNeedingReauth.Select(x => string.IsNullOrWhiteSpace(x.GoogleAccountEmail) ? x.Name : x.GoogleAccountEmail));
+        private const string SignInExpiredColor = "#E5484D";
+        public Visibility JoinButtonVisibility => IsSignInExpired ? Visibility.Collapsed : Visibility.Visible;
+        public Visibility SignInButtonVisibility => IsSignInExpired ? Visibility.Visible : Visibility.Collapsed;
+        public Action<string> ReconnectGoogle { get; set; }
+        public bool ShouldShowTaskbarWidget => IsSignInExpired || _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
         public Visibility LoadingVisibility => _isInitialLoading ? Visibility.Visible : Visibility.Collapsed;
@@ -42,13 +50,14 @@ namespace MeetingBar.Windows.ViewModels
         public bool Use24HourClock => _settings.Current.Use24HourClock;
         public bool ShowTimelineDate => _settings.Current.ShowTimelineDate;
         public string TimelineDateFormat => _settings.Current.TimelineDateFormat;
-        public string Header => NextEvent?.IsCurrent == true ? T("CURRENT MEETING") : T("NEXT MEETING");
-        public string NextTitle => NextEvent?.Title ?? T("No upcoming meetings");
-        public string NextMeta => NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
+        public string Header => IsSignInExpired ? T("SIGN-IN EXPIRED") : NextEvent?.IsCurrent == true ? T("CURRENT MEETING") : T("NEXT MEETING");
+        public string NextTitle => IsSignInExpired ? T("Google Calendar sign-in expired") : NextEvent?.Title ?? T("No upcoming meetings");
+        public string NextMeta => IsSignInExpired ? T("{0}: new and changed meetings are no longer loading.", ExpiredAccounts) : NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
         public string WidgetTitle
         {
             get
             {
+                if (IsSignInExpired) return TruncateWidgetTitle(T("Google Calendar sign-in expired"));
                 if (WidgetEvent == null)
                 {
                     switch (_settings.Current.EndOfDayWidgetBehavior)
@@ -65,9 +74,9 @@ namespace MeetingBar.Windows.ViewModels
                 return TruncateWidgetTitle(WidgetEvent.Title ?? T("Untitled event"));
             }
         }
-        public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
-        public Visibility WidgetIconVisibility => WidgetEvent != null && _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
-        public string WidgetEventColor => WidgetEvent?.CalendarColor ?? "#6D7CFF";
+        public string WidgetTime => IsSignInExpired || WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
+        public Visibility WidgetIconVisibility => IsSignInExpired || WidgetEvent != null && _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
+        public string WidgetEventColor => IsSignInExpired ? SignInExpiredColor : WidgetEvent?.CalendarColor ?? "#6D7CFF";
         public bool CanJoinNext => NextEvent?.CanJoin == true;
         public ICommand JoinCommand { get; }
         public ICommand OpenEventCommand { get; }
@@ -79,6 +88,7 @@ namespace MeetingBar.Windows.ViewModels
         public ICommand CreateMeetingCommand { get; }
         public ICommand OpenCalendarCommand { get; }
         public ICommand OpenBookmarkCommand { get; }
+        public ICommand ReconnectGoogleCommand { get; }
 
         public MainViewModel(CalendarSyncService sync, SettingsService settings, MeetingOpener opener)
         {
@@ -93,6 +103,7 @@ namespace MeetingBar.Windows.ViewModels
             CreateMeetingCommand = new RelayCommand(() => _opener.Open(_settings.Current.CreateMeetingUrl));
             OpenCalendarCommand = new RelayCommand(OpenCalendar, () => CanOpenCalendar);
             OpenBookmarkCommand = new RelayCommand(x => _opener.Open((x as Bookmark)?.Url));
+            ReconnectGoogleCommand = new RelayCommand(() => { var source = _sync.SourcesNeedingReauth.FirstOrDefault(); if (source != null) ReconnectGoogle?.Invoke(source.Id); });
             _sync.Changed += SyncChanged;
             _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
             _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
@@ -161,7 +172,7 @@ namespace MeetingBar.Windows.ViewModels
             var max = Math.Max(5, _settings.Current.TitleMaxLength);
             return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
         }
-        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
+        private void RaiseComputed() { Raise(nameof(IsSignInExpired)); Raise(nameof(JoinButtonVisibility)); Raise(nameof(SignInButtonVisibility)); Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
         public void RefreshSettings() { _isInitialLoading = true; RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }

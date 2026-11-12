@@ -6,6 +6,8 @@
 
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
+- Added an expired Google sign-in alert that shows like an active event: the taskbar widget reads "Google Calendar sign-in expired" with a red marker, and the popup's top card names the account and offers Sign in again.
+
 ### Fixed
 
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->

@@ -94,7 +94,7 @@ namespace MeetingBar.Windows.Views
                 : settings.UseAutomaticWidgetColor
                     ? new SolidColorBrush(Color.FromArgb(30, eventColor.R, eventColor.G, eventColor.B))
                     : new SolidColorBrush(Color.FromArgb(225, Mix(background, eventColor, 0.16).R, Mix(background, eventColor, 0.16).G, Mix(background, eventColor, 0.16).B));
-            _isHighlighted = WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
+            _isHighlighted = vm?.IsSignInExpired == true || WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
             if (_isHighlighted && settings.WidgetHighlightStyle == WidgetHighlightStyle.Shine) StartShine(foreground); else StopShine();
             UpdateSurfaceBackground();
             WidgetSurface.BorderBrush = Brushes.Transparent;

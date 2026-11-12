@@ -111,7 +111,7 @@ Provider refresh results and crash information are written without event titles 
 
 If Google reports missing Calendar permission, open **Settings → Calendars**, complete step 3 under **Data Access**, click **Disconnect**, then connect again so Google issues a token with the required scope.
 
-If a Google account keeps losing its sign-in after 7 days, the OAuth app is still in **Testing**. Open **Google Auth Platform → Audience**, click **Publish app**, then reconnect the account once. MeetingBar shows a notification when a Google sign-in expires; click it to sign in again.
+If a Google account keeps losing its sign-in after 7 days, the OAuth app is still in **Testing**. Open **Google Auth Platform → Audience**, click **Publish app**, then reconnect the account once. MeetingBar shows a notification when a Google sign-in expires; click it to sign in again. Until you do, the taskbar widget reads "Google Calendar sign-in expired" and the popup offers **Sign in again**.
 
 ## License
 

@@ -47,6 +47,7 @@ namespace MeetingBar.Windows.Services
         {
             Localizer.SetLanguage(_settings.Current.Language);
             _sync = new CalendarSyncService(_settings); _opener = new MeetingOpener(_settings); _main = new MainViewModel(_sync, _settings, _opener);
+            _main.ReconnectGoogle = sourceId => _ = ConnectGoogleFromSettings(sourceId);
             _trayIcon = CreateTrayIcon(AppAccentColor(), false, System.Drawing.Color.Transparent);
             _tray = new Forms.NotifyIcon { Icon = _trayIcon, Visible = true, Text = "MeetingBar" };
             _tray.MouseClick += (s, e) => { if (e.Button == Forms.MouseButtons.Left) TogglePopup(); };
@@ -361,7 +362,7 @@ namespace MeetingBar.Windows.Services
         private void UpdateTray()
         {
             var item = _main.TaskbarEvent;
-            var text = item == null ? "MeetingBar — " + T("No upcoming meetings") : item.Title + " — " + item.Countdown;
+            var text = _main.IsSignInExpired ? "MeetingBar — " + T("Google Calendar sign-in expired") : item == null ? "MeetingBar — " + T("No upcoming meetings") : item.Title + " — " + item.Countdown;
             _tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
             UpdateTrayIcon(item);
             _widget?.ApplyPosition(_settings.Current);
