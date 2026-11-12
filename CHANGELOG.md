@@ -6,14 +6,24 @@
 
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
+- Added a Settings > Widget > Monitor choice for the display whose taskbar shows the widget. The popup opens on that display, fullscreen hiding only reacts to apps on it, and the widget falls back to the primary display while the chosen one is disconnected.
+- Added a Settings > Events toggle for all-day events in the taskbar.
 - Added an expired Google sign-in alert that shows like an active event: the taskbar widget reads "Google Calendar sign-in expired" with a red marker, and the popup's top card names the account and offers Sign in again.
 
 ### Fixed
 
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
+- Fixed all-day events such as holidays holding the taskbar widget and tray for the whole day; timed meetings now come first, and an all-day event shows only when no timed meeting is left today.
+- Fixed the taskbar widget showing no next meeting when it fell outside the days shown in the popup, for example after a weekend; the next meeting is now searched 30 days ahead.
+- Fixed Classic Outlook recurring meetings: occurrences are now read the way Outlook requires, and each occurrence has its own identity, so dismissing one or receiving its reminder no longer affects the others.
+- Kept the previous Outlook events when Outlook could not be read, for example while busy, instead of clearing the widget.
+- Fixed Open calendar using the legacy single-provider setting instead of each event's calendar source; Classic Outlook sources now open the event's calendar folder in Classic Outlook.
+- Fixed saving in Settings undoing events dismissed in MeetingBar while Settings was open.
+- Fixed the log file stopping after its second rotation.
+- Stopped links from calendar data from opening anything other than web and meeting-app protocols, so an invite or ICS feed cannot launch `file:` or similar handlers.
+- Reduced idle work in the taskbar widget by skipping unchanged appearance and size updates.
 - Fixed expired Google sign-ins going unnoticed: a notification now names the account and reconnects it when clicked, repeating every two hours until fixed. The error message explains Google's 7-day limit for OAuth apps in Testing, and the Google setup guide says to publish the app instead of adding test users.
-- Fixed log rotation, which stopped all logging once `meetingbar.log.old` existed.
 
 ## 0.1.2 - 2026-10-30
 

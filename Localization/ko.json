@@ -346,5 +346,13 @@
   "Dismiss": "해제",
   "Calendar is clear": "일정 없음",
   "No events today": "오늘 일정 없음",
-  "Join": "참가"
+  "Join": "참가",
+  "Monitor": "모니터",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "위젯을 표시할 작업 표시줄의 디스플레이를 선택합니다. 해당 디스플레이가 연결되지 않은 동안에는 주 디스플레이를 사용합니다.",
+  "Primary display (automatic)": "주 디스플레이(자동)",
+  "Display {0}": "디스플레이 {0}",
+  "Display {0} (not connected)": "디스플레이 {0}(연결 안 됨)",
+  "Primary": "주 디스플레이",
+  "All-day events in the taskbar": "작업 표시줄의 종일 일정",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "오늘 남은 시간 지정 회의가 없으면 공휴일 같은 종일 일정을 작업 표시줄에 표시합니다. 시간이 지정된 회의가 항상 우선합니다."
 }

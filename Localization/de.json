@@ -346,5 +346,13 @@
   "Dismiss": "Schließen",
   "Calendar is clear": "Kalender ist frei",
   "No events today": "Heute keine Termine",
-  "Join": "Teilnehmen"
+  "Join": "Teilnehmen",
+  "Monitor": "Bildschirm",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Wählen Sie den Bildschirm, in dessen Taskleiste das Widget erscheint. Solange dieser Bildschirm nicht verbunden ist, verwendet das Widget den Hauptbildschirm.",
+  "Primary display (automatic)": "Hauptbildschirm (automatisch)",
+  "Display {0}": "Bildschirm {0}",
+  "Display {0} (not connected)": "Bildschirm {0} (nicht verbunden)",
+  "Primary": "Hauptbildschirm",
+  "All-day events in the taskbar": "Ganztägige Termine in der Taskleiste",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Zeigt einen ganztägigen Termin wie einen Feiertag in der Taskleiste an, wenn heute kein Termin mit Uhrzeit mehr ansteht. Termine mit Uhrzeit haben immer Vorrang."
 }

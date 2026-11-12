@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Globalization;
 using Microsoft.Win32;
+using MeetingBar.Display;
 using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Services;
@@ -22,6 +23,10 @@ namespace MeetingBar.Windows.Views
         private bool _isHighlighted;
         private bool _shineRunning;
         private double _shineDestination;
+        // ApplyPosition runs twice a second. Skip unchanged work, because new brushes redraw the layered window.
+        private string _appearanceKey;
+        private string _widthKey;
+        private double _cachedWidth;
         public TaskbarWidgetWindow(MainViewModel vm, Action clicked)
         {
             InitializeComponent();
@@ -46,21 +51,23 @@ namespace MeetingBar.Windows.Views
         public void ApplyPosition(AppSettings settings)
         {
             ApplyAppearance(settings);
-            Width = DesiredWidgetWidth(settings); Height = 40;
-            var taskbar = NativeMethods.FindWindow("Shell_TrayWnd", null);
-            NativeMethods.RECT rect;
-            if (!NativeMethods.GetWindowRect(taskbar, out rect)) { Left = SystemParameters.WorkArea.Right - Width; Top = SystemParameters.WorkArea.Bottom - Height; return; }
-            var dpi = VisualTreeHelper.GetDpi(this); var sx = dpi.DpiScaleX; var sy = dpi.DpiScaleY;
-            var targetTop = rect.Top / sy + Math.Max(0, ((rect.Bottom - rect.Top) / sy - Height) / 2.0) + settings.WidgetOffsetY;
-            Top = Clamp(targetTop, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height);
-            if (settings.WidgetMode == WidgetMode.TaskbarLeft) Left = Clamp(rect.Left / sx + 8 + settings.WidgetOffsetX, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
-            else
-            {
-                var notify = NativeMethods.FindWindowEx(taskbar, IntPtr.Zero, "TrayNotifyWnd", null);
-                NativeMethods.RECT trayRect;
-                var targetLeft = NativeMethods.GetWindowRect(notify, out trayRect) ? trayRect.Left / sx - Width - 6 + settings.WidgetOffsetX : rect.Right / sx - Width - 180 + settings.WidgetOffsetX;
-                Left = Clamp(targetLeft, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
-            }
+            const double height = 40;
+            var width = DesiredWidgetWidth(settings);
+            var handle = new WindowInteropHelper(this).Handle;
+            var monitor = MonitorCatalog.Resolve(MonitorCatalog.GetAll(), settings.WidgetMonitorDevice);
+            if (handle == IntPtr.Zero || monitor == null) { Width = width; Height = height; return; }
+            var taskbar = WidgetPlacement.FindTaskbar(monitor);
+            NativeMethods.RECT taskbarRect, trayRect = default;
+            var hasTaskbar = NativeMethods.GetWindowRect(taskbar, out taskbarRect);
+            var tray = hasTaskbar ? NativeMethods.FindWindowEx(taskbar, IntPtr.Zero, "TrayNotifyWnd", null) : IntPtr.Zero;
+            var hasTray = tray != IntPtr.Zero && NativeMethods.GetWindowRect(tray, out trayRect);
+            var bounds = WidgetPlacement.Place(settings, monitor, width, height, hasTaskbar ? taskbarRect : (NativeMethods.RECT?)null, hasTray ? trayRect : (NativeMethods.RECT?)null);
+            // Size only in pixels here. Also setting Width in DIPs would round differently at scales such as 125%
+            // and resize the window back and forth on every tick.
+            NativeMethods.RECT current;
+            var unchanged = NativeMethods.GetWindowRect(handle, out current) && current.Left == bounds.X && current.Top == bounds.Y
+                && current.Right - current.Left == bounds.Width && current.Bottom - current.Top == bounds.Height;
+            if (!unchanged) NativeMethods.SetWindowPos(handle, NativeMethods.HwndTopmost, bounds.X, bounds.Y, bounds.Width, bounds.Height, NativeMethods.SwpNoActivate);
             EnsureAboveTaskbar();
         }
         public void EnsureAboveTaskbar()
@@ -72,14 +79,22 @@ namespace MeetingBar.Windows.Views
         {
             var vm = DataContext as MainViewModel;
             var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetTime, settings.ShowServiceIcon, settings.WidgetWidth, pixelsPerDip);
+            if (key == _widthKey) return _cachedWidth;
             var title = Measure(vm?.WidgetTitle, 12, FontWeights.SemiBold, "Segoe UI", pixelsPerDip);
             var time = Measure(vm?.WidgetTime, 11, FontWeights.Normal, "Segoe UI", pixelsPerDip);
             var content = 32 + (settings.ShowServiceIcon ? 16 : 0) + title + time;
-            return Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
+            _widthKey = key;
+            return _cachedWidth = Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
         }
         private void ApplyAppearance(AppSettings settings)
         {
             var background = settings.UseAutomaticWidgetColor ? AutomaticTaskbarColor() : ParseColor(settings.WidgetBackgroundColor, Color.FromRgb(32, 32, 32));
+            var vm = DataContext as MainViewModel;
+            var highlighted = vm?.IsSignInExpired == true || WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
+            var key = string.Join("|", background, settings.UseAutomaticWidgetColor, vm?.WidgetEventColor, settings.WidgetHighlightStyle, highlighted, ActualWidth);
+            if (key == _appearanceKey) return;
+            _appearanceKey = key;
             var lightText = RelativeLuminance(background) < 0.53;
             var foreground = lightText ? Colors.White : Color.FromRgb(24, 24, 24);
             var muted = Mix(background, foreground, 0.68);
@@ -87,14 +102,13 @@ namespace MeetingBar.Windows.Views
             _hoverBackground = settings.UseAutomaticWidgetColor
                 ? new SolidColorBrush(Color.FromArgb(14, foreground.R, foreground.G, foreground.B))
                 : new SolidColorBrush(Color.FromArgb(220, background.R, background.G, background.B));
-            var vm = DataContext as MainViewModel;
             var eventColor = ParseColor(vm?.WidgetEventColor, Color.FromRgb(109, 124, 255));
             _highlightBackground = settings.WidgetHighlightStyle == WidgetHighlightStyle.Hover
                 ? _hoverBackground
                 : settings.UseAutomaticWidgetColor
                     ? new SolidColorBrush(Color.FromArgb(30, eventColor.R, eventColor.G, eventColor.B))
                     : new SolidColorBrush(Color.FromArgb(225, Mix(background, eventColor, 0.16).R, Mix(background, eventColor, 0.16).G, Mix(background, eventColor, 0.16).B));
-            _isHighlighted = vm?.IsSignInExpired == true || WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
+            _isHighlighted = highlighted;
             if (_isHighlighted && settings.WidgetHighlightStyle == WidgetHighlightStyle.Shine) StartShine(foreground); else StopShine();
             UpdateSurfaceBackground();
             WidgetSurface.BorderBrush = Brushes.Transparent;

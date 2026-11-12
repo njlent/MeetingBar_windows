@@ -25,8 +25,9 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
-        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
-        public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(Events, _settings.Current, DateTime.Now);
+        // Search all upcoming events, not just the days shown in the popup, so the next meeting is found after a weekend.
+        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextPrioritizedEvent(_sync.UpcomingEvents, _settings.Current, DateTime.Now);
+        public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(_sync.UpcomingEvents, _settings.Current, DateTime.Now);
         public CalendarEvent NextEvent => WidgetEvent;
         // An expired Google sign-in silently stops new meetings, so the widget and popup show it like an active event.
         public bool IsSignInExpired => _sync.SourcesNeedingReauth.Count > 0;
@@ -109,34 +110,12 @@ namespace MeetingBar.Windows.ViewModels
             _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
             _clock.Start(); Rebuild();
         }
-        public bool CanOpenCalendar => _settings.Current.Provider != CalendarProviderKind.Ics || !string.IsNullOrWhiteSpace(NextEvent?.CalendarOpenUrl);
-        private void OpenCalendar()
-        {
-            switch (_settings.Current.Provider)
-            {
-                case CalendarProviderKind.Google: _opener.Open("https://calendar.google.com/calendar/u/0/r"); break;
-                case CalendarProviderKind.Outlook:
-                    try { _opener.Open("outlookcal:"); }
-                    catch { _opener.Open("https://outlook.office.com/calendar/"); }
-                    break;
-                default: _opener.Open(NextEvent?.CalendarOpenUrl); break;
-            }
-        }
-
-        private bool CanOpenEventInCalendar(object value)
-        {
-            var item = value as CalendarEvent;
-            return item != null && (!string.IsNullOrWhiteSpace(item.CalendarOpenUrl) || !string.IsNullOrWhiteSpace(item.EventUrl) || _settings.Current.Provider != CalendarProviderKind.Ics);
-        }
-
+        public bool CanOpenCalendar => _opener.CanOpenCalendar(NextEvent, false);
+        private void OpenCalendar() => _opener.OpenCalendar(NextEvent, false);
+        private bool CanOpenEventInCalendar(object value) => value is CalendarEvent item && _opener.CanOpenCalendar(item, true);
         private void OpenEventInCalendar(object value)
         {
-            var item = value as CalendarEvent;
-            if (item == null) return;
-            var url = item.CalendarOpenUrl ?? item.EventUrl;
-            if (!string.IsNullOrWhiteSpace(url)) { _opener.Open(url); return; }
-            if (_settings.Current.Provider == CalendarProviderKind.Outlook) _opener.Open("outlookcal:");
-            else if (_settings.Current.Provider == CalendarProviderKind.Google) _opener.Open("https://calendar.google.com/calendar/u/0/r");
+            if (value is CalendarEvent item) _opener.OpenCalendar(item, true);
         }
 
         private async Task Refresh() { IsRefreshing = true; await _sync.RefreshAsync(); IsRefreshing = false; }

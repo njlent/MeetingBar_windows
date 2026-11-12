@@ -346,5 +346,13 @@
   "Dismiss": "Descartar",
   "Calendar is clear": "Calendario libre",
   "No events today": "No hay eventos hoy",
-  "Join": "Unirse"
+  "Join": "Unirse",
+  "Monitor": "Monitor",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Elige la pantalla en cuya barra de tareas aparece el widget. Mientras esa pantalla esté desconectada, el widget usa la pantalla principal.",
+  "Primary display (automatic)": "Pantalla principal (automática)",
+  "Display {0}": "Pantalla {0}",
+  "Display {0} (not connected)": "Pantalla {0} (no conectada)",
+  "Primary": "Principal",
+  "All-day events in the taskbar": "Eventos de todo el día en la barra de tareas",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Muestra un evento de todo el día, como un festivo, en la barra de tareas cuando hoy no quedan reuniones con hora. Las reuniones con hora siempre tienen prioridad."
 }

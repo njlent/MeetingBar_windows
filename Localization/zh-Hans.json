@@ -346,5 +346,13 @@
   "Dismiss": "忽略",
   "Calendar is clear": "日历上暂无安排",
   "No events today": "今天没有事件",
-  "Join": "加入"
+  "Join": "加入",
+  "Monitor": "显示器",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "选择在哪个显示器的任务栏上显示小组件。该显示器断开连接期间，小组件会使用主显示器。",
+  "Primary display (automatic)": "主显示器（自动）",
+  "Display {0}": "显示器 {0}",
+  "Display {0} (not connected)": "显示器 {0}（未连接）",
+  "Primary": "主显示器",
+  "All-day events in the taskbar": "任务栏中的全天事件",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "当今天没有剩余的定时会议时，在任务栏中显示节假日等全天事件。定时会议始终优先。"
 }

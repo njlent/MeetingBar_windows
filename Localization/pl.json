@@ -346,5 +346,13 @@
   "Dismiss": "Zamknij",
   "Calendar is clear": "Kalendarz jest wolny",
   "No events today": "Brak zdarzeń dzisiaj",
-  "Join": "Dołącz"
+  "Join": "Dołącz",
+  "Monitor": "Monitor",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Wybierz ekran, na którego pasku zadań ma się pojawiać widżet. Gdy ten ekran jest odłączony, widżet korzysta z ekranu głównego.",
+  "Primary display (automatic)": "Ekran główny (automatycznie)",
+  "Display {0}": "Ekran {0}",
+  "Display {0} (not connected)": "Ekran {0} (niepodłączony)",
+  "Primary": "Główny",
+  "All-day events in the taskbar": "Zdarzenia całodniowe na pasku zadań",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Pokazuj zdarzenie całodniowe, np. święto, na pasku zadań, gdy na dziś nie zostało już żadne spotkanie o określonej godzinie. Spotkania o określonej godzinie zawsze mają pierwszeństwo."
 }
