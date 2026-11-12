@@ -8,6 +8,7 @@
 
 - Added a Settings > Widget > Monitor choice for the display whose taskbar shows the widget. The popup opens on that display, fullscreen hiding only reacts to apps on it, and the widget falls back to the primary display while the chosen one is disconnected.
 - Added a Settings > Events toggle for all-day events in the taskbar.
+- Added an expired Google sign-in alert that shows like an active event: the taskbar widget reads "Google Calendar sign-in expired" with a red marker, and the popup's top card names the account and offers Sign in again.
 
 ### Fixed
 
@@ -22,6 +23,7 @@
 - Fixed the log file stopping after its second rotation.
 - Stopped links from calendar data from opening anything other than web and meeting-app protocols, so an invite or ICS feed cannot launch `file:` or similar handlers.
 - Reduced idle work in the taskbar widget by skipping unchanged appearance and size updates.
+- Fixed expired Google sign-ins going unnoticed: a notification now names the account and reconnects it when clicked, repeating every two hours until fixed. The error message explains Google's 7-day limit for OAuth apps in Testing, and the Google setup guide says to publish the app instead of adding test users.
 
 ## 0.1.2 - 2026-10-30
 

@@ -105,6 +105,16 @@ namespace MeetingBar.Tests
                 Equal(true, FullscreenWidgetVisibilityService.MatchesBlacklist(blacklist, null, "GAME"));
             });
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
+            Test("expired Google refresh token asks for a new sign-in", () =>
+            {
+                var body = "{\"error\":\"invalid_grant\",\"error_description\":\"Token has been expired or revoked.\"}";
+                Equal(true, GoogleCalendarProvider.OAuthError(body, true) is GoogleReauthRequiredException);
+                Contains("Testing", GoogleCalendarProvider.OAuthError(body, true).Message);
+                Equal(false, GoogleCalendarProvider.OAuthError(body, false) is GoogleReauthRequiredException);
+                Equal(false, GoogleCalendarProvider.OAuthError("{\"error\":\"invalid_client\",\"error_description\":\"Unauthorized\"}", true) is GoogleReauthRequiredException);
+                Contains("Unauthorized", GoogleCalendarProvider.OAuthError("{\"error\":\"invalid_client\",\"error_description\":\"Unauthorized\"}", true).Message);
+                Equal(false, GoogleCalendarProvider.OAuthError("<html>502</html>", true) is GoogleReauthRequiredException);
+            });
             Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
             Test("maps Google event-specific colors", () =>
             {

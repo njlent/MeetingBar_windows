@@ -91,7 +91,7 @@ namespace MeetingBar.Windows.Views
         {
             var background = settings.UseAutomaticWidgetColor ? AutomaticTaskbarColor() : ParseColor(settings.WidgetBackgroundColor, Color.FromRgb(32, 32, 32));
             var vm = DataContext as MainViewModel;
-            var highlighted = WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
+            var highlighted = vm?.IsSignInExpired == true || WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
             var key = string.Join("|", background, settings.UseAutomaticWidgetColor, vm?.WidgetEventColor, settings.WidgetHighlightStyle, highlighted, ActualWidth);
             if (key == _appearanceKey) return;
             _appearanceKey = key;

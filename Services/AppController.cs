@@ -38,19 +38,25 @@ namespace MeetingBar.Windows.Services
         private TaskbarWidgetWindow _widget;
         private readonly CancellationTokenSource _ipcCancellation = new CancellationTokenSource();
         private readonly object _settingsStateGate = new object();
+        private static readonly TimeSpan ReauthReminderInterval = TimeSpan.FromHours(2);
+        private readonly Dictionary<string, DateTime> _reauthNotifiedAt = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private string _reauthBalloonSourceId;
+        private string _reauthBalloonTitle;
 
         public AppController()
         {
             Localizer.SetLanguage(_settings.Current.Language);
             _sync = new CalendarSyncService(_settings); _opener = new MeetingOpener(_settings); _main = new MainViewModel(_sync, _settings, _opener);
+            _main.ReconnectGoogle = sourceId => _ = ConnectGoogleFromSettings(sourceId);
             _trayIcon = CreateTrayIcon(AppAccentColor(), false, System.Drawing.Color.Transparent);
             _tray = new Forms.NotifyIcon { Icon = _trayIcon, Visible = true, Text = "MeetingBar" };
             _tray.MouseClick += (s, e) => { if (e.Button == Forms.MouseButtons.Left) TogglePopup(); };
+            _tray.BalloonTipClicked += (s, e) => ReconnectFromBalloon();
             BuildTrayMenu();
             Localizer.LanguageChanged += (s, e) => { BuildTrayMenu(); UpdateTray(); };
             _notifications = new NotificationService(_settings, _opener, _tray);
             _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
-            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); }));
+            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); NotifyReauthRequired(); }));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
         }
@@ -275,6 +281,37 @@ namespace MeetingBar.Windows.Services
             }
         }
 
+        // A dead Google refresh token silently stops meetings from that account, so tell the user right away and
+        // keep reminding them while it stays broken.
+        private void NotifyReauthRequired()
+        {
+            var expired = _sync.SourcesNeedingReauth;
+            foreach (var id in _reauthNotifiedAt.Keys.Where(id => !expired.Any(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase))).ToList()) _reauthNotifiedAt.Remove(id);
+            var now = DateTime.Now;
+            var due = expired.Where(x => !_reauthNotifiedAt.TryGetValue(x.Id, out var last) || now - last >= ReauthReminderInterval).ToList();
+            if (due.Count == 0) return;
+            foreach (var source in due) _reauthNotifiedAt[source.Id] = now;
+            _reauthBalloonSourceId = due[0].Id;
+            var accounts = string.Join(", ", due.Select(x => string.IsNullOrWhiteSpace(x.GoogleAccountEmail) ? x.Name : x.GoogleAccountEmail));
+            _reauthBalloonTitle = T("Google Calendar sign-in expired");
+            _tray.BalloonTipTitle = _reauthBalloonTitle;
+            _tray.BalloonTipText = T("{0}: new and changed meetings are no longer loading. Click to sign in again.", accounts);
+            _tray.ShowBalloonTip(15000);
+            AppLog.Info("Google sign-in expired; prompted reconnect for " + due.Count + " source(s)");
+        }
+
+        private async void ReconnectFromBalloon()
+        {
+            var sourceId = _reauthBalloonSourceId;
+            // Reminder balloons share the tray icon; only act when the clicked balloon is still the sign-in prompt.
+            if (sourceId == null || _tray.BalloonTipTitle != _reauthBalloonTitle) return;
+            _reauthBalloonSourceId = null;
+            await ConnectGoogleFromSettings(sourceId);
+            // Accounts connected together expire together: prompt for the next one now instead of in two hours.
+            foreach (var id in _reauthNotifiedAt.Keys.Where(id => !string.Equals(id, sourceId, StringComparison.OrdinalIgnoreCase)).ToList()) _reauthNotifiedAt.Remove(id);
+            NotifyReauthRequired();
+        }
+
         private void InjectDebugEvent()
         {
             try
@@ -348,7 +385,7 @@ namespace MeetingBar.Windows.Services
         private void UpdateTray()
         {
             var item = _main.TaskbarEvent;
-            var text = item == null ? "MeetingBar — " + T("No upcoming meetings") : item.Title + " — " + item.Countdown;
+            var text = _main.IsSignInExpired ? "MeetingBar — " + T("Google Calendar sign-in expired") : item == null ? "MeetingBar — " + T("No upcoming meetings") : item.Title + " — " + item.Countdown;
             _tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
             UpdateTrayIcon(item);
             _widget?.ApplyPosition(_settings.Current);

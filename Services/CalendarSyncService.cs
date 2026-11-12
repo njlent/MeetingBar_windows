@@ -26,6 +26,7 @@ namespace MeetingBar.Windows.Services
         public IReadOnlyList<CalendarEvent> UpcomingEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarInfo> Calendars { get; private set; } = new List<CalendarInfo>();
         public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = T("Starting…") };
+        public IReadOnlyList<CalendarSourceSettings> SourcesNeedingReauth { get; private set; } = new List<CalendarSourceSettings>();
         public event EventHandler Changed;
 
         public CalendarSyncService(SettingsService settings) { _settings = settings; }
@@ -50,6 +51,7 @@ namespace MeetingBar.Windows.Services
                 foreach (var staleId in _lastGoodBySource.Keys.Where(x => !activeIds.Contains(x)).ToList()) _lastGoodBySource.Remove(staleId);
                 var outcomes = await Task.WhenAll(sources.Select(source => FetchSourceAsync(source, from, to)));
                 var errors = new List<string>();
+                SourcesNeedingReauth = outcomes.Where(x => x.Error is GoogleReauthRequiredException).Select(x => x.Source).ToList();
                 foreach (var outcome in outcomes)
                 {
                     if (outcome.Error == null) _lastGoodBySource[outcome.Source.Id] = outcome.Result;
