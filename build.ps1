@@ -48,6 +48,8 @@ if ($Test) {
     if ($LASTEXITCODE -ne 0) { throw "MeetingBar test build failed." }
     & (Join-Path $root "Tests\bin\$Configuration\MeetingBar.Tests.exe")
     if ($LASTEXITCODE -ne 0) { throw "MeetingBar tests failed." }
+    & $dotnet run --project (Join-Path $root "Tests\SettingsTests\SettingsTests.csproj") -c $Configuration
+    if ($LASTEXITCODE -ne 0) { throw "MeetingBar Settings tests failed." }
 }
 
 if ($Package) {

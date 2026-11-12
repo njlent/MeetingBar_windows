@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
+using MeetingBar.Display;
 using MeetingBar.Localization;
 using static MeetingBar.Localization.Localizer;
 
@@ -27,12 +28,12 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider, _language;
+    private ComboBox? _widgetMode, _widgetMonitor, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider, _language;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
-    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
+    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _allDayInWidget, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
     private ToggleSwitch? _hideWidgetInFullscreen;
     private ComboBox? _runningFullscreenApp;
@@ -250,6 +251,40 @@ public sealed partial class MainWindow : Window
         return combo;
     }
 
+    // Each item's Tag is a display device name; the empty tag follows the primary display.
+    private static ComboBox MonitorChoice(string selectedDevice)
+    {
+        var combo = new ComboBox { Width = 260, HorizontalAlignment = HorizontalAlignment.Right };
+        combo.Items.Add(new ComboBoxItem { Content = T("Primary display (automatic)"), Tag = "" });
+        combo.SelectedIndex = 0;
+        foreach (var monitor in MonitorCatalog.GetAll().OrderBy(x => x.Number).ThenBy(x => x.DeviceName, StringComparer.OrdinalIgnoreCase))
+        {
+            var item = new ComboBoxItem { Content = MonitorLabel(monitor), Tag = monitor.DeviceName };
+            combo.Items.Add(item);
+            if (string.Equals(monitor.DeviceName, selectedDevice, StringComparison.OrdinalIgnoreCase)) combo.SelectedItem = item;
+        }
+        // Keep a disconnected choice so saving does not forget it; the widget returns once the display reconnects.
+        if (!string.IsNullOrWhiteSpace(selectedDevice) && combo.SelectedIndex == 0)
+        {
+            var missing = new ComboBoxItem { Content = T("Display {0} (not connected)", DisplayNumber(selectedDevice)), Tag = selectedDevice };
+            combo.Items.Add(missing);
+            combo.SelectedItem = missing;
+        }
+        return combo;
+    }
+
+    private static string MonitorLabel(ConnectedMonitor monitor)
+    {
+        var label = T("Display {0}", DisplayNumber(monitor.DeviceName)) + " · " + monitor.Width + " × " + monitor.Height;
+        return monitor.IsPrimary ? label + " · " + T("Primary") : label;
+    }
+
+    private static string DisplayNumber(string deviceName)
+    {
+        var number = ConnectedMonitor.NumberOf(deviceName);
+        return number > 0 ? number.ToString(System.Globalization.CultureInfo.CurrentCulture) : deviceName;
+    }
+
     private static NumberBox Number(double value, double minimum, double maximum, double step = 1) => new()
     {
         Value = value,
@@ -270,6 +305,9 @@ public sealed partial class MainWindow : Window
         AddSection(T("Taskbar surface"));
         _widgetMode = Choice(new[] { T("Tray icon only"), T("Right side"), T("Left side") }, (int)_settings.WidgetMode);
         AddCard(T("Mode"), T("Taskbar modes use a borderless overlay because Windows has no third-party text-widget slot."), _widgetMode);
+
+        _widgetMonitor = MonitorChoice(_settings.WidgetMonitorDevice);
+        AddCard(T("Monitor"), T("Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display."), _widgetMonitor);
 
         _widgetWidth = new Slider { Minimum = 140, Maximum = 900, Value = _settings.WidgetWidth, Width = 280, StepFrequency = 10 };
         AddCard(T("Maximum widget width"), T("Short titles shrink automatically; longer titles can use this limit."), _widgetWidth);
@@ -465,6 +503,9 @@ public sealed partial class MainWindow : Window
         AddHeader(T("Events"), T("Control which calendar events appear in MeetingBar."), "\uE8FD");
         AddSection(T("Event filters"));
         _allDay = Toggle(_settings.ShowAllDayEvents); AddCard(T("All-day events"), T("Show events without a specific time."), _allDay);
+        _allDayInWidget = Toggle(_settings.ShowAllDayEventsInWidget); AddCard(T("All-day events in the taskbar"), T("Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first."), _allDayInWidget);
+        _allDayInWidget.IsEnabled = _allDay.IsOn;
+        _allDay.Toggled += (_, _) => _allDayInWidget.IsEnabled = _allDay.IsOn;
         _declined = Toggle(_settings.ShowDeclinedEvents); AddCard(T("Declined events"), T("Keep meetings you declined in the list."), _declined);
         _tentative = Toggle(_settings.ShowTentativeEvents); AddCard(T("Tentative and pending events"), T("Include invitations that are not accepted yet."), _tentative);
         _free = Toggle(_settings.ShowFreeEvents); AddCard(T("Free and non-busy events"), T("Include events that do not block your calendar."), _free);
@@ -873,6 +914,7 @@ public sealed partial class MainWindow : Window
         {
             case "Widget":
                 if (_widgetMode != null) _settings.WidgetMode = (WidgetMode)Math.Max(0, _widgetMode.SelectedIndex);
+                if (_widgetMonitor?.SelectedItem is ComboBoxItem { Tag: string monitorDevice }) _settings.WidgetMonitorDevice = monitorDevice;
                 if (_widgetWidth != null) _settings.WidgetWidth = _widgetWidth.Value;
                 if (_offsetX != null) _settings.WidgetOffsetX = Finite(_offsetX.Value, 0);
                 if (_offsetY != null) _settings.WidgetOffsetY = Finite(_offsetY.Value, 0);
@@ -915,6 +957,7 @@ public sealed partial class MainWindow : Window
                 break;
             case "Events":
                 if (_allDay != null) _settings.ShowAllDayEvents = _allDay.IsOn;
+                if (_allDayInWidget != null) _settings.ShowAllDayEventsInWidget = _allDayInWidget.IsOn;
                 if (_declined != null) _settings.ShowDeclinedEvents = _declined.IsOn;
                 if (_tentative != null) _settings.ShowTentativeEvents = _tentative.IsOn;
                 if (_free != null) _settings.ShowFreeEvents = _free.IsOn;

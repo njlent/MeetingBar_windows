@@ -14,7 +14,8 @@ namespace MeetingBar.Windows.Services
     {
         private static readonly int CurrentProcessId = ReadCurrentProcessId();
 
-        public static bool ShouldHide(AppSettings settings)
+        /// <param name="widgetMonitor">The display showing the widget. A fullscreen app on another display leaves the widget visible.</param>
+        public static bool ShouldHide(AppSettings settings, MeetingBar.Display.ConnectedMonitor widgetMonitor = null)
         {
             if (settings?.HideWidgetInFullscreen != true) return false;
             var window = NativeMethods.GetForegroundWindow();
@@ -44,6 +45,7 @@ namespace MeetingBar.Windows.Services
             if (monitor == IntPtr.Zero) return false;
             var monitorInfo = new NativeMethods.MONITORINFO { Size = Marshal.SizeOf(typeof(NativeMethods.MONITORINFO)) };
             if (!NativeMethods.GetMonitorInfo(monitor, ref monitorInfo)) return false;
+            if (widgetMonitor != null && (monitorInfo.Monitor.Left != widgetMonitor.Left || monitorInfo.Monitor.Top != widgetMonitor.Top)) return false;
 
             return CoversMonitor(ToRectangle(windowRect), ToRectangle(monitorInfo.Monitor));
         }

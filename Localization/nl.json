@@ -340,5 +340,13 @@
   "Dismiss": "Negeren",
   "Calendar is clear": "Agenda is leeg",
   "No events today": "Vandaag geen afspraken",
-  "Join": "Deelnemen"
+  "Join": "Deelnemen",
+  "Monitor": "Beeldscherm",
+  "Choose the display whose taskbar shows the widget. While that display is disconnected, the widget uses the primary display.": "Kies op de taakbalk van welk beeldscherm de widget verschijnt. Zolang dat beeldscherm niet is aangesloten, gebruikt de widget het hoofdbeeldscherm.",
+  "Primary display (automatic)": "Hoofdbeeldscherm (automatisch)",
+  "Display {0}": "Beeldscherm {0}",
+  "Display {0} (not connected)": "Beeldscherm {0} (niet aangesloten)",
+  "Primary": "Hoofdbeeldscherm",
+  "All-day events in the taskbar": "Afspraken voor de hele dag op de taakbalk",
+  "Show an all-day event, such as a holiday, in the taskbar when no timed meeting is left today. Timed meetings always come first.": "Geef een afspraak voor de hele dag, zoals een feestdag, op de taakbalk weer als er vandaag geen afspraak met een tijd meer is. Afspraken met een tijd gaan altijd voor."
 }

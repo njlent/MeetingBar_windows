@@ -19,6 +19,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Localization\Localizer.cs" Link="Localization\Localizer.cs" />
+    <Compile Include="..\Interop\MonitorCatalog.cs" Link="Interop\MonitorCatalog.cs" />
     <EmbeddedResource Include="..\Localization\*.json" Exclude="..\Localization\en.json" LogicalName="MeetingBar.Localization.%(Filename).json" />
   </ItemGroup>
   <ItemGroup>

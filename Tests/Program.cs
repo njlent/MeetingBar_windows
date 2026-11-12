@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using MeetingBar.Display;
 using MeetingBar.Localization;
+using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.Services;
 using MeetingBar.Windows.Views;
@@ -231,6 +233,109 @@ namespace MeetingBar.Tests
                 var current = new CalendarEvent { Id = "current", Start = now.Date.AddDays(-1).AddHours(23), End = now.AddMinutes(30) };
                 settings.EndOfDayWidgetBehavior = EndOfDayWidgetBehavior.Hide;
                 Equal("current", EventWindowPolicy.NextWidgetEvent(new[] { current, tomorrow }, settings, now).Id);
+            });
+            Test("timed meetings outrank all-day events in the taskbar", () =>
+            {
+                var now = new DateTime(2026, 11, 6, 10, 0, 0);
+                var holiday = new CalendarEvent { Id = "holiday", Start = now.Date, End = now.Date.AddDays(1), IsAllDay = true, IsBusy = true };
+                var later = new CalendarEvent { Id = "later", Start = now.AddHours(2), End = now.AddHours(3), IsBusy = true };
+                var monday = new CalendarEvent { Id = "monday", Start = now.Date.AddDays(3).AddHours(9), End = now.Date.AddDays(3).AddHours(10), IsBusy = true };
+                var settings = new AppSettings();
+                Equal("later", EventWindowPolicy.NextWidgetEvent(new[] { holiday, later, monday }, settings, now).Id);
+                Equal("later", EventWindowPolicy.NextPrioritizedEvent(new[] { holiday, later, monday }, settings, now).Id);
+                // With no timed meeting left today, today's all-day event fills the taskbar.
+                Equal("holiday", EventWindowPolicy.NextWidgetEvent(new[] { holiday, monday }, settings, now).Id);
+                var tomorrowHoliday = new CalendarEvent { Id = "tomorrow-holiday", Start = now.Date.AddDays(1), End = now.Date.AddDays(2), IsAllDay = true, IsBusy = true };
+                Equal("monday", EventWindowPolicy.NextWidgetEvent(new[] { tomorrowHoliday, monday }, settings, now).Id);
+                Equal("tomorrow-holiday", EventWindowPolicy.NextWidgetEvent(new[] { tomorrowHoliday }, settings, now).Id);
+                settings.ShowAllDayEventsInWidget = false;
+                Equal("monday", EventWindowPolicy.NextWidgetEvent(new[] { holiday, monday }, settings, now).Id);
+                Equal<CalendarEvent>(null, EventWindowPolicy.NextWidgetEvent(new[] { holiday }, settings, now));
+            });
+            Test("the next meeting is searched beyond the days shown in the popup", () =>
+            {
+                var now = new DateTime(2026, 11, 6, 18, 0, 0);
+                var settings = new AppSettings { IncludePastDay = false, IncludeNextDay = false };
+                var range = CalendarSyncService.FetchRange(settings, now);
+                Equal(now.Date, range.Item1);
+                Equal(now.Date.AddDays(EventWindowPolicy.UpcomingSearchDays + 1), range.Item2);
+                settings.IncludePastDay = true; settings.TimelinePastDays = 2;
+                settings.IncludeNextDay = true; settings.TimelineFutureDays = 30;
+                range = CalendarSyncService.FetchRange(settings, now);
+                Equal(now.Date.AddDays(-2), range.Item1);
+                Equal(now.Date.AddDays(31), range.Item2);
+            });
+            Test("recurring Outlook occurrences get distinct identities", () =>
+            {
+                var first = OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 11, 2, 9, 0, 0));
+                var next = OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 11, 3, 9, 0, 0));
+                Equal(false, first == next);
+                Equal(first, OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 11, 2, 9, 0, 0)));
+            });
+            Test("calendar links open only web and meeting-app protocols", () =>
+            {
+                Equal(true, MeetingOpener.IsSafeCalendarLink("https://teams.microsoft.com/l/meetup-join/abc"));
+                Equal(true, MeetingOpener.IsSafeCalendarLink("zoommtg://zoom.us/join?confno=123"));
+                Equal(false, MeetingOpener.IsSafeCalendarLink("file:///C:/Windows/System32/cmd.exe"));
+                Equal(false, MeetingOpener.IsSafeCalendarLink(@"\\server\share\run.exe"));
+                Equal(false, MeetingOpener.IsSafeCalendarLink("ms-msdt:/id PCWDiagnostic"));
+                Equal(false, MeetingOpener.IsSafeCalendarLink("javascript:alert(1)"));
+                Equal(false, MeetingOpener.IsSafeCalendarLink(null));
+            });
+            Test("open calendar follows each event's own source", () =>
+            {
+                var outlook = CalendarSourceSettings.Create(CalendarProviderKind.Outlook);
+                var google = CalendarSourceSettings.Create(CalendarProviderKind.Google);
+                var settings = new AppSettings { CalendarSources = new List<CalendarSourceSettings> { outlook, google } };
+                Equal(CalendarProviderKind.Google, MeetingOpener.CalendarProviderFor(settings, new CalendarEvent { SourceId = google.Id }));
+                Equal(CalendarProviderKind.Outlook, MeetingOpener.CalendarProviderFor(settings, new CalendarEvent { SourceId = outlook.Id }));
+                outlook.Enabled = false;
+                // Without an event, use the first enabled source rather than the legacy single-provider setting.
+                Equal(CalendarProviderKind.Google, MeetingOpener.CalendarProviderFor(settings, null));
+            });
+            Test("log rotation replaces an existing archive", () =>
+            {
+                var folder = Path.Combine(Path.GetTempPath(), "MeetingBar.Tests." + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(folder);
+                try
+                {
+                    var log = Path.Combine(folder, "meetingbar.log");
+                    File.WriteAllText(log + ".old", "previous archive");
+                    File.WriteAllText(log, new string('x', 32));
+                    AppLog.RotateIfNeeded(log, 16);
+                    Equal(false, File.Exists(log));
+                    Equal(new string('x', 32), File.ReadAllText(log + ".old"));
+                    File.WriteAllText(log, "small");
+                    AppLog.RotateIfNeeded(log, 16);
+                    Equal("small", File.ReadAllText(log));
+                }
+                finally { Directory.Delete(folder, true); }
+            });
+            Test("the widget display falls back to the primary display and returns", () =>
+            {
+                var primary = new ConnectedMonitor { DeviceName = @"\\.\DISPLAY1", IsPrimary = true, Right = 1920, Bottom = 1080 };
+                var secondary = new ConnectedMonitor { DeviceName = @"\\.\DISPLAY2", Left = -2560, Right = 0, Bottom = 1440 };
+                Equal(secondary, MonitorCatalog.Resolve(new[] { primary, secondary }, @"\\.\display2"));
+                Equal(primary, MonitorCatalog.Resolve(new[] { primary }, @"\\.\DISPLAY2"));
+                Equal(primary, MonitorCatalog.Resolve(new[] { secondary, primary }, ""));
+                Equal<ConnectedMonitor>(null, MonitorCatalog.Resolve(new ConnectedMonitor[0], @"\\.\DISPLAY2"));
+                Equal(2, secondary.Number);
+            });
+            Test("the widget sits on the chosen display's taskbar in physical pixels", () =>
+            {
+                var settings = new AppSettings { WidgetMode = WidgetMode.NearTray };
+                var monitor = new ConnectedMonitor { Left = -2560, Right = 0, Bottom = 1440, WorkLeft = -2560, WorkRight = 0, WorkBottom = 1368, Dpi = 144 };
+                var taskbar = new NativeMethods.RECT { Left = -2560, Top = 1368, Right = 0, Bottom = 1440 };
+                var right = WidgetPlacement.Place(settings, monitor, 300, 40, taskbar, null);
+                Equal(450, right.Width); Equal(60, right.Height);
+                Equal(1374, right.Y);
+                Equal(-720, right.X); // 180 px at 150% from the right edge when the taskbar has no notification area
+                var tray = new NativeMethods.RECT { Left = -400, Top = 1368, Right = 0, Bottom = 1440 };
+                Equal(-400 - 450 - 9, WidgetPlacement.Place(settings, monitor, 300, 40, taskbar, tray).X);
+                settings.WidgetMode = WidgetMode.TaskbarLeft;
+                Equal(-2548, WidgetPlacement.Place(settings, monitor, 300, 40, taskbar, null).X);
+                settings.WidgetOffsetX = -5000;
+                Equal(-2560, WidgetPlacement.Place(settings, monitor, 300, 40, taskbar, null).X);
             });
             Test("dismissed meetings stay in agendas but are muted elsewhere", () =>
             {
